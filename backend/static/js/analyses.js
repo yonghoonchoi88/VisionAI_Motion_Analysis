@@ -173,17 +173,57 @@
         </tr>`).join("");
     }
 
+    // 완료된 작업을 비교 · 이력 표 맨 위에 추가 (서버 렌더링과 같은 열 구성)
     function prependHistory(jobId, s) {
       const body = $("#history-body");
       $(".empty", body)?.remove();
       const detail = app.dataset.detailUrl.replace("/0/", `/${jobId}/`);
+      const expected = form.elements.expected_action;
+      const expectedValue = expected.value;
+      const expectedText = expectedValue ? expected.options[expected.selectedIndex].text : "";
+      const isCamera = inputType.value === "CAMERA";
+
+      const preds = s.predictions.length
+        ? s.predictions.map((p) => `
+            <div class="pred"><span class="muted">T${p.track_id}</span> ${esc(p.action_id)} ${esc(p.action_label)}
+              <strong>${pct(p.confidence)}</strong>
+              ${p.is_uncertain ? '<span class="pill pill--warn">불확실</span>' : ""}
+              ${expectedValue ? (p.action_label === expectedValue ? '<span class="pill pill--success">일치</span>' : '<span class="pill pill--muted">다름</span>') : ""}
+            </div>`).join("")
+        : `<span class="muted">${esc(s.status === "FAILURE" ? s.error_message : (s.result_message || "-"))}</span>`;
+      const time = s.total_time_sec != null
+        ? `${Number(s.total_time_sec).toFixed(1)}초${s.inference_time_sec != null ? `<br><small class="muted">AI ${Number(s.inference_time_sec).toFixed(1)}초</small>` : ""}`
+        : "-";
+
       const tr = document.createElement("tr");
+      tr.dataset.input = inputType.value;
       tr.innerHTML = `<td>${jobId}</td><td>${esc(form.elements.title.value || "(방금 요청)")}</td>
-        <td>${inputType.value === "CAMERA" ? "IP Webcam" : "영상 업로드"}</td>
+        <td>${isCamera ? `IP Webcam <small class="muted">${esc(form.elements.capture_seconds?.value)}초</small>` : "영상 업로드"}</td>
+        <td>${expectedText ? esc(expectedText) : '<span class="muted">-</span>'}</td>
+        <td>${preds}</td><td>${time}</td>
         <td><span class="pill pill--${s.status.toLowerCase()}">${esc(s.status_display)}</span></td>
-        <td>${s.predictions.length}</td><td>방금</td><td><a href="${detail}">상세</a></td>`;
+        <td>방금</td><td><a href="${detail}">상세</a></td>`;
       body.prepend(tr);
+      applyFilter();
     }
+
+    // 입력 방식 필터 (전체 / 영상 업로드 / IP Webcam)
+    let currentFilter = "ALL";
+    function applyFilter() {
+      $$("#history-body tr[data-input]").forEach((tr) => {
+        tr.hidden = currentFilter !== "ALL" && tr.dataset.input !== currentFilter;
+      });
+      $$(".compare__card").forEach((card) => {
+        card.classList.toggle("is-dim", currentFilter !== "ALL" && !card.classList.contains(`compare__card--${currentFilter.toLowerCase()}`));
+      });
+    }
+    $$(".chip").forEach((chip) =>
+      chip.addEventListener("click", () => {
+        currentFilter = chip.dataset.filter;
+        $$(".chip").forEach((c) => c.classList.toggle("is-active", c === chip));
+        applyFilter();
+      })
+    );
 
     function setBusy(busy) {
       startBtn.disabled = busy;

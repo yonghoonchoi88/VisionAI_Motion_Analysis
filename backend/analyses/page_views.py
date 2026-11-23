@@ -35,15 +35,47 @@ def staff_required(view):
     return wrapper
 
 
+def input_type_comparison(jobs) -> list[dict]:
+    """입력 방식별 비교 요약 (과제 9-1: 입력 방식·수행 동작·예측·Confidence·처리 시간).
+
+    성공한 작업만 대상으로 하며, 사람이 여러 명이면 사람별 예측을 각각 센다.
+    '선택 동작 일치율'은 사용자가 수행 동작을 고른 예측만 분모로 쓴다.
+    """
+    rows = []
+    for input_type in AnalysisJob.InputType:
+        done = [j for j in jobs if j.input_type == input_type.value and j.status == AnalysisJob.Status.SUCCESS]
+        preds = [(j, p) for j in done for p in j.predictions.all()]
+        confs = [p.confidence for _, p in preds]
+        labeled = [(j, p) for j, p in preds if j.expected_action]
+        matched = sum(1 for j, p in labeled if p.action_label == j.expected_action)
+        totals = [j.total_time_sec for j in done if j.total_time_sec is not None]
+        infers = [j.inference_time_sec for j in done if j.inference_time_sec is not None]
+        rows.append({
+            "key": input_type.value,
+            "label": input_type.label,
+            "jobs": len(done),
+            "predictions": len(preds),
+            "avg_confidence": sum(confs) / len(confs) if confs else None,
+            "uncertain": sum(1 for _, p in preds if p.is_uncertain),
+            "match": matched,
+            "labeled": len(labeled),
+            "match_rate": matched / len(labeled) if labeled else None,
+            "avg_total": sum(totals) / len(totals) if totals else None,
+            "avg_infer": sum(infers) / len(infers) if infers else None,
+        })
+    return rows
+
+
 @login_required
 def index(request):
-    recent = (
+    jobs = list(
         AnalysisJob.objects.filter(user=request.user)
-        .annotate(person_count=Count("predictions"))
-        .order_by("-created_at")[:10]
+        .prefetch_related("predictions")
+        .order_by("-created_at")
     )
     context = {
-        "recent_jobs": recent,
+        "recent_jobs": jobs[:20],
+        "comparison": input_type_comparison(jobs),
         "actions": ACTIONS,
         "allowed_cameras": settings.ALLOWED_CAMERA_HOSTS,
         "capture_default": settings.CAMERA_CAPTURE_SECONDS_DEFAULT,

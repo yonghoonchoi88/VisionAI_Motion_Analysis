@@ -99,27 +99,70 @@
   </div>
 </div>
 
-<!-- ③ 최근 이력 -->
-<section class="card">
-  <h2 class="card__title">최근 분석 이력</h2>
-  <table class="table">
-    <thead><tr><th>#</th><th>제목</th><th>입력 방식</th><th>상태</th><th>인원</th><th>요청 시각</th><th></th></tr></thead>
-    <tbody id="history-body">
-      {% for job in recent_jobs %}
-        <tr>
-          <td>{{ job.id }}</td>
-          <td>{{ job.display_title|truncatechars:40 }}</td>
-          <td>{{ job.get_input_type_display }}</td>
-          <td><span class="pill pill--{{ job.status|lower }}">{{ job.get_status_display }}</span></td>
-          <td>{{ job.person_count }}</td>
-          <td>{{ job.created_at|date:"m/d H:i:s" }}</td>
-          <td><a href="{% url 'analyses:detail' job.id %}">상세</a></td>
-        </tr>
-      {% empty %}
-        <tr class="empty"><td colspan="7">아직 분석 이력이 없습니다.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<!-- ③ 입력 방식 비교 + 최근 이력 (과제 9-1 비교 화면) -->
+<section class="card" id="history">
+  <div class="card__head">
+    <h2 class="card__title">입력 방식 비교 · 분석 이력</h2>
+    <div class="chips" role="tablist" aria-label="입력 방식 필터">
+      <button type="button" class="chip is-active" data-filter="ALL">전체</button>
+      <button type="button" class="chip" data-filter="UPLOAD">영상 업로드</button>
+      <button type="button" class="chip" data-filter="CAMERA">IP Webcam</button>
+    </div>
+  </div>
+
+  <div class="compare">
+    {% for c in comparison %}
+      <div class="compare__card compare__card--{{ c.key|lower }}">
+        <h3>{{ c.label }} <small class="muted">성공 {{ c.jobs }}건 · 예측 {{ c.predictions }}명</small></h3>
+        <dl>
+          <dt>평균 신뢰도</dt>
+          <dd>{% if c.avg_confidence is not None %}{% widthratio c.avg_confidence 1 100 %}%{% else %}-{% endif %}
+            {% if c.predictions %}<small class="muted">(불확실 {{ c.uncertain }}명)</small>{% endif %}</dd>
+          <dt>선택 동작 일치</dt>
+          <dd>{% if c.match_rate is not None %}{% widthratio c.match_rate 1 100 %}% <small class="muted">({{ c.match }}/{{ c.labeled }})</small>{% else %}-{% endif %}</dd>
+          <dt>평균 처리 시간</dt>
+          <dd>{% if c.avg_total is not None %}전체 {{ c.avg_total|floatformat:1 }}초 <small class="muted">· AI {{ c.avg_infer|floatformat:1 }}초</small>{% else %}-{% endif %}</dd>
+        </dl>
+      </div>
+    {% endfor %}
+  </div>
+  <p class="hint">두 입력 방식은 촬영 거리·길이·사람·조건이 달라, 신뢰도 차이를 모델 정확도의 우열로 단정할 수 없습니다. ‘선택 동작 일치’는 분석 전에 수행한 동작을 고른 경우만 셉니다.</p>
+
+  <div class="table-wrap">
+    <table class="table table--history">
+      <thead>
+        <tr><th>#</th><th>제목</th><th>입력 방식</th><th>수행 동작</th><th>예측 · 신뢰도</th><th>처리 시간</th><th>상태</th><th>요청 시각</th><th></th></tr>
+      </thead>
+      <tbody id="history-body">
+        {% for job in recent_jobs %}
+          <tr data-input="{{ job.input_type }}">
+            <td>{{ job.id }}</td>
+            <td>{{ job.display_title|truncatechars:28 }}</td>
+            <td>{{ job.get_input_type_display }}{% if job.capture_seconds %} <small class="muted">{{ job.capture_seconds }}초</small>{% endif %}</td>
+            <td>{% if job.expected_action %}{{ job.get_expected_action_display }}{% else %}<span class="muted">-</span>{% endif %}</td>
+            <td>
+              {% for p in job.predictions.all %}
+                <div class="pred">
+                  <span class="muted">T{{ p.track_id }}</span> {{ p.action_id }} {{ p.action_label }}
+                  <strong>{% widthratio p.confidence 1 100 %}%</strong>
+                  {% if p.is_uncertain %}<span class="pill pill--warn">불확실</span>{% endif %}
+                  {% if job.expected_action %}{% if job.expected_action == p.action_label %}<span class="pill pill--success">일치</span>{% else %}<span class="pill pill--muted">다름</span>{% endif %}{% endif %}
+                </div>
+              {% empty %}
+                <span class="muted">{% if job.status == "FAILURE" %}{{ job.error_message|truncatechars:36 }}{% elif job.result_message %}{{ job.result_message }}{% else %}-{% endif %}</span>
+              {% endfor %}
+            </td>
+            <td>{% if job.total_time_sec %}{{ job.total_time_sec|floatformat:1 }}초{% if job.inference_time_sec %}<br><small class="muted">AI {{ job.inference_time_sec|floatformat:1 }}초</small>{% endif %}{% else %}-{% endif %}</td>
+            <td><span class="pill pill--{{ job.status|lower }}">{{ job.get_status_display }}</span></td>
+            <td>{{ job.created_at|date:"m/d H:i" }}</td>
+            <td><a href="{% url 'analyses:detail' job.id %}">상세</a></td>
+          </tr>
+        {% empty %}
+          <tr class="empty"><td colspan="9">아직 분석 이력이 없습니다.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 {% endblock %}
 

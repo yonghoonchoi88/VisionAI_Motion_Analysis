@@ -209,6 +209,30 @@ class AnalysisApiTests(TestCase):
         self.client.force_login(self.admin)
         self.assertEqual(self.client.get(self.list_url).json()["count"], 1)
 
+    def test_index_compares_input_types(self):
+        """과제 9-1 비교 화면: 입력 방식별 평균 신뢰도·선택 동작 일치율·처리 시간."""
+        self.create_upload(expected_action="wave")                       # wave 0.82 · 0.42(불확실), 둘 다 일치
+        def fake_capture(url, seconds, out):
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            Path(out).write_bytes(b"fake")
+            return mock.Mock(path=Path(out))
+        with mock.patch("analyses.tasks.capture_clip", side_effect=fake_capture), \
+             mock.patch("analyses.tasks.predict_video", return_value=fake_result(1)):
+            with self.captureOnCommitCallbacks(execute=True):
+                self.client.post(self.list_url, {"input_type": "CAMERA", "camera_url": "http://192.168.0.10:8080/video",
+                                                 "expected_action": "sit_stand"})    # 예측 wave → 불일치
+
+        resp = self.client.get(reverse("analyses:index"))
+        rows = {r["key"]: r for r in resp.context["comparison"]}
+        up, cam = rows["UPLOAD"], rows["CAMERA"]
+        self.assertEqual((up["jobs"], up["predictions"], up["uncertain"]), (1, 2, 1))
+        self.assertAlmostEqual(up["avg_confidence"], 0.62)
+        self.assertEqual((up["match"], up["labeled"], up["match_rate"]), (2, 2, 1.0))
+        self.assertEqual((cam["match"], cam["labeled"], cam["match_rate"]), (0, 1, 0.0))
+        self.assertIsNotNone(up["avg_total"])
+        self.assertContains(resp, "수행 동작")
+        self.assertContains(resp, "일치")
+
     def test_pages_render(self):
         job_id = self.create_upload().json()["id"]
         self.assertContains(self.client.get(reverse("analyses:index")), "AI 분석 시작")
