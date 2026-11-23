@@ -21,17 +21,22 @@ from .models import AnalysisJob, PersonPrediction
 
 class PersonPredictionSerializer(serializers.ModelSerializer):
     action_name_ko = serializers.SerializerMethodField()
+    runner_up_name_ko = serializers.SerializerMethodField()
 
     class Meta:
         model = PersonPrediction
         fields = [
-            "track_id", "action_id", "action_label", "action_name_ko", "confidence", "is_uncertain",
+            "track_id", "action_id", "action_label", "action_name_ko", "confidence", "margin",
+            "runner_up_label", "runner_up_name_ko", "is_uncertain",
             "window_count", "window_mode", "valid_frame_ratio", "duration_sec", "probabilities", "created_at",
         ]
         read_only_fields = fields
 
     def get_action_name_ko(self, obj) -> str:
         return ACTION_KO.get(obj.action_label, obj.action_label)
+
+    def get_runner_up_name_ko(self, obj) -> str:
+        return ACTION_KO.get(obj.runner_up_label, obj.runner_up_label)
 
 
 def validate_camera_url(value: str) -> str:

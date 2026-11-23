@@ -32,6 +32,7 @@ def fake_result(n_people: int = 2) -> InferenceResult:
     preds = [
         {
             "track_id": i + 1, "action_id": "A006", "action_label": "wave", "confidence": 0.82 - 0.4 * i,
+            "margin": round(0.64 - 0.4 * i, 4), "runner_up_label": "sit_stand",
             "is_uncertain": i > 0, "window_count": 1, "window_mode": "whole_track",
             "valid_frame_ratio": 1.0, "duration_sec": 4.9, "probabilities": {"wave": 0.82, "sit_stand": 0.18},
         }
@@ -91,6 +92,25 @@ class AnalysisApiTests(TestCase):
         self.assertTrue(status["is_finished"])
         self.assertEqual([p["track_id"] for p in status["predictions"]], [1, 2])
         self.assertTrue(status["predictions"][1]["is_uncertain"])
+        first = status["predictions"][0]                          # 판단 근거(1·2등 차이)도 저장·응답
+        self.assertEqual((first["margin"], first["runner_up_label"]), (0.64, "sit_stand"))
+        self.assertEqual(first["runner_up_name_ko"], "앉았다 일어나기")
+
+    def test_old_ai_response_without_margin_still_saves(self):
+        """margin이 없는 예전 AI 서버 응답도 저장된다 (배포 순서가 달라도 깨지지 않게)."""
+        result = fake_result(1)
+        for p in result.predictions:
+            p.pop("margin"), p.pop("runner_up_label")
+        job = AnalysisJob.objects.get(pk=self.create_upload(result=result).json()["id"])
+        pred = job.predictions.get()
+        self.assertEqual((job.status, pred.margin, pred.runner_up_label), ("SUCCESS", None, ""))
+
+    def test_detail_page_shows_probabilities_sorted(self):
+        job_id = self.create_upload().json()["id"]
+        pred = AnalysisJob.objects.get(pk=job_id).predictions.first()
+        self.assertEqual([k for k, _ in pred.sorted_probabilities], ["wave", "sit_stand"])
+        html = self.client.get(reverse("analyses:detail", args=[job_id])).content.decode()
+        self.assertIn("차이", html)
 
     def test_no_person_is_success_with_zero_predictions(self):
         job_id = self.create_upload(result=fake_result(0)).json()["id"]

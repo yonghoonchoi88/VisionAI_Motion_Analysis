@@ -50,8 +50,12 @@
           {% endif %}
         </header>
         <p class="hint">Window {{ p.window_count }}개 ({{ p.window_mode }}) · 등장 {{ p.duration_sec|floatformat:1 }}초 · 유효 Frame {% widthratio p.valid_frame_ratio 1 100 %}%</p>
+        {% if p.margin is not None %}
+          <p class="hint">판단 근거: 1등 {% widthratio p.confidence 1 100 %}% · 2등({{ p.runner_up_label }})과 차이 <strong>{% widthratio p.margin 1 100 %}%p</strong>
+            <small class="muted">(무작위 수준 16.7%)</small></p>
+        {% endif %}
         <ul class="probs">
-          {% for label, prob in p.probabilities.items %}
+          {% for label, prob in p.sorted_probabilities %}
             <li><span>{{ label }}</span><span class="bar"><i style="width: {% widthratio prob 1 100 %}%"></i></span><span>{% widthratio prob 1 100 %}%</span></li>
           {% endfor %}
         </ul>

@@ -10,7 +10,7 @@ class PersonPredictionInline(admin.TabularInline):
     model = PersonPrediction
     extra = 0
     can_delete = False
-    fields = ("track_id", "action_id", "action_label", "confidence", "is_uncertain", "window_mode", "valid_frame_ratio")
+    fields = ("track_id", "action_id", "action_label", "confidence", "margin", "runner_up_label", "is_uncertain", "window_mode", "valid_frame_ratio")
     readonly_fields = fields
 
 
@@ -42,7 +42,7 @@ class AnalysisJobAdmin(admin.ModelAdmin):
 
 @admin.register(PersonPrediction)
 class PersonPredictionAdmin(admin.ModelAdmin):
-    list_display = ("id", "job", "track_id", "action_id", "action_label", "confidence", "is_uncertain", "window_mode", "created_at")
+    list_display = ("id", "job", "track_id", "action_id", "action_label", "confidence", "margin", "runner_up_label", "is_uncertain", "window_mode", "created_at")
     list_filter = ("action_label", "is_uncertain", "window_mode")
     search_fields = ("job__user__username", "action_label", "job__id")
     list_select_related = ("job", "job__user")

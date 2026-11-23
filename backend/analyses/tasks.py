@@ -103,6 +103,8 @@ def _to_prediction(job: AnalysisJob, p: dict) -> PersonPrediction:
         action_label=p["action_label"],
         action_id=p.get("action_id") or ACTION_ID.get(p["action_label"], ""),
         confidence=p["confidence"],
+        margin=p.get("margin"),                              # 예전 AI 서버 응답에는 없을 수 있음 → NULL
+        runner_up_label=p.get("runner_up_label") or "",
         is_uncertain=p.get("is_uncertain", False),
         window_count=p.get("window_count", 0),
         window_mode=p.get("window_mode", ""),

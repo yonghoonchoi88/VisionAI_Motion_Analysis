@@ -186,6 +186,7 @@
           <td>
             <span class="bar bar--inline"><i style="width:${pct(p.confidence)}"></i></span> ${pct(p.confidence)}
             ${p.is_uncertain ? '<span class="pill pill--warn">판단 불확실</span>' : ""}
+            ${p.margin != null ? `<br><small class="muted">2등(${esc(p.runner_up_name_ko || p.runner_up_label)})과 차이 ${(p.margin * 100).toFixed(1)}%p</small>` : ""}
           </td>
           <td><small>유효 Frame ${pct(p.valid_frame_ratio)} · ${p.duration_sec ?? "-"}초<br>${esc(p.window_mode)} · Window ${p.window_count}</small></td>
         </tr>`).join("");

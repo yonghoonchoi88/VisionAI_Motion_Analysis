@@ -115,6 +115,11 @@ class PersonPrediction(models.Model):
     action_label = models.CharField("예측 동작", max_length=30, db_index=True)
     action_id = models.CharField("Action ID", max_length=8)
     confidence = models.FloatField("Confidence")
+    margin = models.FloatField(
+        "1·2등 확률 차", null=True, blank=True,
+        help_text="1등 확률 - 2등 확률. 작으면 두 동작 사이에서 헷갈린 것 (판단 불확실 기준 ②)",
+    )
+    runner_up_label = models.CharField("2등 동작", max_length=30, blank=True)
     is_uncertain = models.BooleanField("판단 불확실", default=False)
     window_count = models.PositiveIntegerField("처리한 Window 수", default=0)
     window_mode = models.CharField("Window 방식", max_length=20, blank=True)
@@ -131,3 +136,8 @@ class PersonPrediction(models.Model):
 
     def __str__(self) -> str:
         return f"job {self.job_id} · track {self.track_id} · {self.action_label} ({self.confidence:.2f})"
+
+    @property
+    def sorted_probabilities(self) -> list[tuple[str, float]]:
+        """화면 막대그래프용: 확률이 큰 동작부터."""
+        return sorted((self.probabilities or {}).items(), key=lambda kv: kv[1], reverse=True)
