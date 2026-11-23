@@ -1,0 +1,28 @@
+{
+  "_comment": "원본 configs/project.json(Pose) + day07_realtime.json(Window) + day08_multi_person.json(Tracking)을 서비스용으로 합친 설정. 값은 원본과 동일하며 경로만 새 프로젝트 기준으로 바꿈.",
+  "pose": {
+    "model": "models/yolo11n-pose.pt",
+    "image_size": 640,
+    "person_confidence": 0.25,
+    "keypoint_confidence": 0.5,
+    "device": "auto"
+  },
+  "window": {
+    "strategy": "auto",
+    "whole_track_max_seconds": 12.0,
+    "window_seconds": 5.0,
+    "min_window_fill_ratio": 0.8,
+    "min_valid_feature_ratio": 0.6,
+    "min_valid_features": 10,
+    "prediction_interval_sec": 0.25,
+    "confidence_threshold": 0.55
+  },
+  "tracking": {
+    "tracker": "bytetrack.yaml",
+    "lost_timeout_seconds": 2.0
+  },
+  "limits": {
+    "max_video_seconds": 60
+  },
+  "_comment_strategy": "strategy: sliding(7일차 5초 Window) | whole_track(6일차 학습처럼 사람별 전체 구간 1개) | auto(사람이 보인 시간이 whole_track_max_seconds 이하면 whole_track, 아니면 sliding). 환경변수 WINDOW_STRATEGY로 덮어쓰기 가능."
+}

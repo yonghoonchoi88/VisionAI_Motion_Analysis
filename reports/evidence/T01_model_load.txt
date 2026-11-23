@@ -1,0 +1,12 @@
+[T01 PASS] 모델 산출물 3종 로드·교차 검증 완료
+  model             : RandomForestClassifier (scikit-learn 1.9.1)
+  input features    : 1140 = 30 steps × 38
+  min_valid_frames  : 10
+  expects DataFrame : False
+  classes (predict_proba 열 순서):
+    [0] A001  bend_return
+    [1] A004  drink_return
+    [2] A002  leg_raise_lower
+    [3] A005  sit_stand
+    [4] A003  walk_turn_walk
+    [5] A006  wave
