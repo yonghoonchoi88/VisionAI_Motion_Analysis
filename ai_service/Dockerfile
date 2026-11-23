@@ -15,7 +15,7 @@ RUN apt-get update \
 WORKDIR /app
 COPY requirements.txt .
 # torch는 CPU 전용 휠을 먼저 설치 → requirements.txt의 torch==2.15.0 조건을 이미 만족하므로 GPU판을 받지 않음
-RUN pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0 torchvision \
+RUN pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0 torchvision==0.29.2 \
  && pip install -r requirements.txt
 
 COPY . .
