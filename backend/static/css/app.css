@@ -178,3 +178,5 @@ code { background: #eef0f7; padding: 1px 6px; border-radius: 6px; font-size: .88
 .table--history td:nth-last-child(-n+2) { white-space: nowrap; }
 .nowrap { white-space: nowrap; }
 .table--history th, .table--history td { padding: 10px 9px; }
+.kpis--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 14px; }
+.kpis--3 .kpi { box-shadow: none; }

@@ -16,7 +16,8 @@ class PersonPredictionInline(admin.TabularInline):
 
 @admin.register(AnalysisJob)
 class AnalysisJobAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "input_type", "status", "stage", "person_count", "result_status", "created_at", "finished_at")
+    list_display = ("id", "user", "title_or_file", "input_type", "status", "person_count", "result_status", "created_at", "finished_at")
+    list_display_links = ("id", "title_or_file")
     list_filter = ("status", "input_type", "result_status", "created_at")
     search_fields = ("user__username", "title", "memo", "celery_task_id")
     date_hierarchy = "created_at"
@@ -29,6 +30,10 @@ class AnalysisJobAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(_person_count=Count("predictions"))
+
+    @admin.display(description="제목·파일")
+    def title_or_file(self, obj):
+        return obj.display_title
 
     @admin.display(description="예측 인원", ordering="_person_count")
     def person_count(self, obj):

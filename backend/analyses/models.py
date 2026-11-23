@@ -33,7 +33,9 @@ class AnalysisJob(models.Model):
         DONE = "DONE", "완료"
 
     # ── 요청 정보 ─────────────────────────────────────────
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="analysis_jobs")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name="요청 사용자", on_delete=models.CASCADE, related_name="analysis_jobs"
+    )
     title = models.CharField("제목", max_length=100, blank=True)
     memo = models.TextField("메모", blank=True)
     input_type = models.CharField("입력 방식", max_length=10, choices=InputType.choices)
@@ -108,7 +110,7 @@ class AnalysisJob(models.Model):
 
 
 class PersonPrediction(models.Model):
-    job = models.ForeignKey(AnalysisJob, on_delete=models.CASCADE, related_name="predictions")
+    job = models.ForeignKey(AnalysisJob, verbose_name="분석 작업", on_delete=models.CASCADE, related_name="predictions")
     track_id = models.PositiveIntegerField("Track ID")
     action_label = models.CharField("예측 동작", max_length=30, db_index=True)
     action_id = models.CharField("Action ID", max_length=8)

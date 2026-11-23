@@ -1,0 +1,42 @@
+erDiagram
+    direction LR
+    auth_user ||--o{ analyses_analysisjob : "1:N 요청"
+    analyses_analysisjob ||--o{ analyses_personprediction : "1:N 사람별 예측"
+
+    auth_user {
+        int id PK "사용자 번호"
+        varchar username "로그인 이름"
+        varchar password "비밀번호 해시"
+        bool is_staff "관리자 여부"
+    }
+    analyses_analysisjob {
+        bigint id PK "작업 번호"
+        int user_id FK "요청 사용자"
+        varchar input_type "UPLOAD / CAMERA"
+        varchar video_file "MEDIA 경로 (영상은 DB 밖)"
+        varchar camera_url "허용 카메라 주소"
+        smallint capture_seconds "수집 시간 5~10초"
+        varchar expected_action "수행 동작 (정답 아님)"
+        varchar status "PENDING STARTED SUCCESS FAILURE"
+        varchar stage "대기 수집 분석 완료"
+        varchar celery_task_id "Celery 작업 ID"
+        text error_message "실패 사유"
+        varchar result_status "OK NO_PERSON NO_VALID_TRACK"
+        float inference_time_sec "AI 추론 시간"
+        float processing_time_sec "Worker 처리 시간"
+        datetime created_at "요청 시각"
+        datetime finished_at "완료 시각"
+    }
+    analyses_personprediction {
+        bigint id PK "예측 번호"
+        bigint job_id FK "소속 작업"
+        int track_id "작업 안의 추적 번호"
+        varchar action_label "예측 동작"
+        varchar action_id "A001 ~ A006"
+        float confidence "예측 점수"
+        bool is_uncertain "0.55 미만"
+        int window_count "처리한 Window 수"
+        float valid_frame_ratio "입력 품질"
+        json probabilities "Class별 확률"
+        datetime created_at "예측 시각"
+    }

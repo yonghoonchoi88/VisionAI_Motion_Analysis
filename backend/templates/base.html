@@ -20,7 +20,7 @@
             <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}">대시보드</a>
             <a href="{% url 'admin:index' %}">Django Admin</a>
           {% endif %}
-          <span class="nav__user">{{ user.username }}{% if user.is_staff %} <em class="pill pill--muted">관리자</em>{% endif %}</span>
+          <a class="nav__user {% if request.resolver_match.url_name == 'profile' %}is-active{% endif %}" href="{% url 'profile' %}" title="내 정보">{{ user.username }}{% if user.is_staff %} <em class="pill pill--muted">관리자</em>{% endif %}</a>
           <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button class="btn btn--ghost btn--sm">로그아웃</button></form>
         {% else %}
           <a href="{% url 'login' %}">로그인</a>

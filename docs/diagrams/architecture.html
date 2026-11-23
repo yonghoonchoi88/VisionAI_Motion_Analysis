@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<!-- README 3. 전체 아키텍처 그림의 원본. 수정 후 다시 PNG로 렌더링: docs/diagrams/README 참고 -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --ink:#1b2033; --muted:#5b6378; --line:#d9dce8; --indigo:#4338ca; --teal:#0f9d8f; --slate:#475069; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Noto Sans CJK KR", "Noto Sans KR", "Malgun Gothic", sans-serif; color: var(--ink); background: #fff; }
+  #canvas { position: relative; width: 1640px; height: 760px; background: #fff; }
+  .title { position: absolute; left: 30px; top: 14px; font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
+  .title small { font-size: 14px; font-weight: 500; color: var(--muted); margin-left: 10px; }
+  .box { position: absolute; border: 2px solid var(--indigo); border-radius: 12px; background: #fff; overflow: hidden; box-shadow: 0 2px 8px rgba(20,24,45,.06); }
+  .box h3 { margin: 0; padding: 8px 12px; font-size: 16px; color: #fff; background: var(--indigo); display: flex; justify-content: space-between; align-items: baseline; }
+  .box h3 small { font-size: 11px; font-weight: 500; opacity: .85; }
+  .box .files { padding: 8px 12px 4px; font: 12.5px/1.6 "DejaVu Sans Mono", monospace; color: var(--ink); }
+  .box .role { padding: 4px 12px 10px; font-size: 13px; font-weight: 700; color: var(--indigo); }
+  .box.teal { border-color: var(--teal); } .box.teal h3 { background: var(--teal); } .box.teal .role { color: var(--teal); }
+  .box.slate { border-color: var(--slate); } .box.slate h3 { background: var(--slate); } .box.slate .role { color: var(--slate); }
+  .box.light { border-color: #9aa1b2; border-style: dashed; } .box.light h3 { background: #eef0f7; color: var(--ink); }
+  .compose { position: absolute; left: 30px; top: 592px; width: 1080px; height: 140px; border: 2px solid var(--indigo); border-radius: 12px; background: #f7f7ff; padding: 12px 16px; }
+  .compose h4 { margin: 0 0 10px; font-size: 16px; }
+  .chips { display: flex; gap: 8px; margin-bottom: 10px; }
+  .chip { padding: 4px 14px; border-radius: 999px; background: #fff; border: 1.5px solid var(--indigo); font-weight: 700; font-size: 14px; }
+  .chip.teal { border-color: var(--teal); } .chip.slate { border-color: var(--slate); }
+  .compose p { margin: 2px 0; font-size: 13px; color: var(--muted); } .compose code { font-family: "DejaVu Sans Mono", monospace; color: var(--ink); font-size: 12.5px; }
+  svg { position: absolute; left: 0; top: 0; overflow: visible; }
+  .lbl { font-size: 13px; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 5px; }
+  .lbl.sub { font-weight: 500; fill: var(--muted); }
+</style>
+</head>
+<body>
+<div id="canvas">
+  <div class="title">VisionAI Motion Analysis — 전체 연결 구조 <small>번호 = 분석 요청 1건이 지나가는 순서</small></div>
+
+  <div class="box light" style="left:30px; top:70px; width:220px; height:170px">
+    <h3>브라우저</h3>
+    <div class="files">index.html<br>analyses.js</div>
+    <div class="role">분석 요청 · 상태·결과 조회</div>
+  </div>
+
+  <div class="box" style="left:380px; top:70px; width:250px; height:170px">
+    <h3>django <small>Django + DRF</small></h3>
+    <div class="files">urls.py · serializers.py<br>views.py · models.py</div>
+    <div class="role">요청 접수 · 권한 · ORM</div>
+  </div>
+
+  <div class="box slate" style="left:720px; top:88px; width:140px; height:134px">
+    <h3>redis</h3>
+    <div class="files">Celery<br>브로커</div>
+    <div class="role">작업 대기열</div>
+  </div>
+
+  <div class="box" style="left:950px; top:70px; width:250px; height:170px">
+    <h3>celery <small>Worker</small></h3>
+    <div class="files">tasks.py<br>camera_capture.py<br>services.py</div>
+    <div class="role">영상 확보 · 결과 저장</div>
+  </div>
+
+  <div class="box teal" style="left:1330px; top:70px; width:280px; height:170px">
+    <h3>fastapi <small>AI 추론 · DB 접근 없음</small></h3>
+    <div class="files">main.py · predictions.py<br>model_loader · pose_pipeline<br>action_inference · src/ 5개</div>
+    <div class="role">YOLO Pose → 1,140 → RF</div>
+  </div>
+
+  <div class="box slate" style="left:470px; top:372px; width:640px; height:120px">
+    <h3>postgres <small>PostgreSQL 17 · postgres_data 볼륨</small></h3>
+    <div class="files">auth_user · analyses_analysisjob · analyses_personprediction</div>
+    <div class="role">사용자 · 분석 작업(상태·시간) · 사람별 예측 — Django ORM만 접근</div>
+  </div>
+
+  <div class="box light" style="left:1330px; top:372px; width:280px; height:120px">
+    <h3>IP Webcam <small>휴대폰</small></h3>
+    <div class="files">http://&lt;허용 host:port&gt;/video</div>
+    <div class="role">ALLOWED_CAMERA_HOSTS만 호출</div>
+  </div>
+
+  <div class="compose">
+    <h4>compose.yaml — Docker Compose 5개 서비스 <span style="font-weight:500;color:#5b6378;font-size:13px">· 서비스끼리는 이름으로 통신 (postgres · redis · fastapi)</span></h4>
+    <div class="chips"><span class="chip">django</span><span class="chip">celery</span><span class="chip teal">fastapi</span><span class="chip slate">redis</span><span class="chip slate">postgres</span></div>
+    <p><code>backend/Dockerfile</code> → django · celery 이미지 &nbsp;│&nbsp; <code>ai_service/Dockerfile</code> → fastapi 이미지 (CPU)</p>
+    <p>볼륨: <code>postgres_data</code> (DB 유지) · <code>media_data</code> (업로드·수집 영상, django ↔ celery 공유) · <code>models/</code> (읽기 전용)</p>
+  </div>
+
+  <div class="box" style="left:1150px; top:592px; width:460px; height:140px">
+    <h3>관리자 화면 <small>is_staff 전용</small></h3>
+    <div class="files">admin.py · page_views.py<br>dashboard.html · dashboard.js</div>
+    <div class="role">Django Admin 목록·필터 · ORM 집계 → Chart.js 차트</div>
+  </div>
+
+  <svg width="1640" height="760">
+    <defs>
+      <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4338ca"/></marker>
+      <marker id="t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f9d8f"/></marker>
+      <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5b6378"/></marker>
+    </defs>
+    <g stroke-width="2.2" fill="none">
+      <!-- ① / ⑧ 브라우저 ↔ django -->
+      <line x1="252" y1="128" x2="376" y2="128" stroke="#4338ca" marker-end="url(#a)"/>
+      <line x1="378" y1="190" x2="254" y2="190" stroke="#4338ca" marker-end="url(#a)"/>
+      <!-- ③ django → redis, ④ redis → celery -->
+      <line x1="632" y1="155" x2="716" y2="155" stroke="#4338ca" marker-end="url(#a)"/>
+      <line x1="862" y1="155" x2="946" y2="155" stroke="#4338ca" marker-end="url(#a)"/>
+      <!-- ⑤ / ⑥ celery ↔ fastapi -->
+      <line x1="1202" y1="128" x2="1326" y2="128" stroke="#0f9d8f" marker-end="url(#t)"/>
+      <line x1="1328" y1="190" x2="1204" y2="190" stroke="#0f9d8f" marker-end="url(#t)"/>
+      <!-- ② django ↔ postgres (생성·조회) -->
+      <line x1="505" y1="244" x2="505" y2="368" stroke="#5b6378" marker-start="url(#g)" marker-end="url(#g)"/>
+      <!-- ⑦ celery → postgres -->
+      <line x1="1075" y1="244" x2="1075" y2="368" stroke="#5b6378" marker-end="url(#g)"/>
+      <!-- ④-1 IP Webcam → celery -->
+      <path d="M1330,420 C1265,420 1215,330 1195,248" stroke="#5b6378" stroke-dasharray="6 5" marker-end="url(#g)"/>
+      <!-- 관리자 화면 → django (ORM 집계) -->
+      <path d="M1150,640 C1135,560 1120,545 1090,545 L470,545 C448,545 440,535 440,512 L440,248" stroke="#9aa1b2" stroke-dasharray="4 5" marker-end="url(#g)"/>
+    </g>
+    <text class="lbl" x="314" y="118" text-anchor="middle">① 분석 요청</text>
+    <text class="lbl sub" x="314" y="146" text-anchor="middle">영상 · 카메라 주소</text>
+    <text class="lbl" x="314" y="212" text-anchor="middle">⑧ 상태·결과 조회</text>
+    <text class="lbl sub" x="314" y="230" text-anchor="middle">작업 ID · 1초 폴링</text>
+    <text class="lbl" x="674" y="143" text-anchor="middle">③ 커밋 후</text>
+    <text class="lbl sub" x="674" y="176" text-anchor="middle">작업 등록</text>
+    <text class="lbl" x="904" y="143" text-anchor="middle">④ 작업</text>
+    <text class="lbl sub" x="904" y="176" text-anchor="middle">전달</text>
+    <text class="lbl" x="1265" y="118" text-anchor="middle">⑤ 영상 (HTTP)</text>
+    <text class="lbl" x="1265" y="212" text-anchor="middle">⑥ 사람별 예측 JSON</text>
+    <text class="lbl" x="517" y="300">② 작업 생성 · 상태 조회</text>
+    <text class="lbl sub" x="517" y="318">Django ORM</text>
+    <text class="lbl" x="1063" y="300" text-anchor="end">⑦ 결과 · 실패 저장</text>
+    <text class="lbl sub" x="1063" y="318" text-anchor="end">Django ORM</text>
+    <text class="lbl" x="1262" y="300">④-1 N초 수집</text>
+    <text class="lbl sub" x="1262" y="318">WebM 저장</text>
+    <text class="lbl sub" x="790" y="538" text-anchor="middle">관리자 화면 → ORM 집계 · 관리 (Django가 담당)</text>
+  </svg>
+</div>
+</body>
+</html>
