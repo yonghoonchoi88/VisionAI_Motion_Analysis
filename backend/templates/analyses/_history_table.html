@@ -1,0 +1,36 @@
+{# 비교 열이 있는 분석 이력 표 (분석 화면·관리자 대시보드 공용) #}
+  <div class="table-wrap">
+    <table class="table table--history">
+      <thead>
+        <tr><th>#</th>{% if show_user %}<th>요청 사용자</th>{% endif %}<th>제목</th><th>입력 방식</th><th>수행 동작</th><th>예측 · 신뢰도</th><th>처리 시간</th><th>상태</th><th>요청 시각</th></tr>
+      </thead>
+      <tbody id="history-body">
+        {% for job in recent_jobs %}
+          <tr data-input="{{ job.input_type }}">
+            <td><a href="{% url 'analyses:detail' job.id %}" title="상세 보기">#{{ job.id }}</a></td>
+            {% if show_user %}<td>{{ job.user.username }}</td>{% endif %}
+            <td>{{ job.display_title|truncatechars:28 }}</td>
+            <td class="nowrap">{{ job.get_input_type_display }}{% if job.capture_seconds %} <small class="muted">{{ job.capture_seconds }}초</small>{% endif %}</td>
+            <td class="nowrap" title="{{ job.get_expected_action_display }}">{% if job.expected_action %}{{ job.expected_action_id }} {{ job.expected_action }}{% else %}<span class="muted">-</span>{% endif %}</td>
+            <td>
+              {% for p in job.predictions.all %}
+                <div class="pred">
+                  <span class="muted">T{{ p.track_id }}</span> {{ p.action_id }} {{ p.action_label }}
+                  <strong>{% widthratio p.confidence 1 100 %}%</strong>
+                  {% if p.is_uncertain %}<span class="pill pill--warn">불확실</span>{% endif %}
+                  {% if job.expected_action %}{% if job.expected_action == p.action_label %}<span class="pill pill--success">일치</span>{% else %}<span class="pill pill--muted">다름</span>{% endif %}{% endif %}
+                </div>
+              {% empty %}
+                <span class="muted">{% if job.status == "FAILURE" %}{{ job.error_message|truncatechars:36 }}{% elif job.result_message %}{{ job.result_message }}{% else %}-{% endif %}</span>
+              {% endfor %}
+            </td>
+            <td>{% if job.total_time_sec %}{{ job.total_time_sec|floatformat:1 }}초{% if job.inference_time_sec %}<br><small class="muted">AI {{ job.inference_time_sec|floatformat:1 }}초</small>{% endif %}{% else %}-{% endif %}</td>
+            <td><span class="pill pill--{{ job.status|lower }}">{{ job.get_status_display }}</span></td>
+            <td>{{ job.created_at|date:"m/d H:i" }}</td>
+          </tr>
+        {% empty %}
+          <tr class="empty"><td colspan="{% if show_user %}9{% else %}8{% endif %}">아직 분석 이력이 없습니다.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>

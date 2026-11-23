@@ -12,7 +12,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.db import models
 
-from .constants import ACTION_CHOICES
+from .constants import ACTION_CHOICES, ACTION_ID
 
 
 class AnalysisJob(models.Model):
@@ -96,6 +96,11 @@ class AnalysisJob(models.Model):
         # 이전 기록(processing_time_sec 없음): 벽시계 차를 쓰되 AI 추론 시간보다 짧을 수는 없으므로 하한 적용
         wall = (self.finished_at - self.created_at).total_seconds()
         return round(max(wall, self.inference_time_sec or 0.0), 2)
+
+    @property
+    def expected_action_id(self) -> str:
+        """수행 동작(사용자 선택)의 과제 ID — 예측과 같은 형식(A006 wave)으로 비교하기 위함."""
+        return ACTION_ID.get(self.expected_action, "")
 
     @property
     def display_title(self) -> str:

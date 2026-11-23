@@ -175,4 +175,6 @@ code { background: #eef0f7; padding: 1px 6px; border-radius: 6px; font-size: .88
 .pred { white-space: nowrap; line-height: 1.9; }
 .pred .pill { margin-left: 2px; }
 .compare__card.is-dim { opacity: .35; }
-.table--history td:nth-last-child(-n+3) { white-space: nowrap; }
+.table--history td:nth-last-child(-n+2) { white-space: nowrap; }
+.nowrap { white-space: nowrap; }
+.table--history th, .table--history td { padding: 10px 9px; }

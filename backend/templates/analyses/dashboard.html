@@ -29,21 +29,9 @@
   <section class="card"><h2 class="card__title">입력 방식별 평균 AI 추론 시간 <small class="muted">(선택, 성공 작업)</small></h2><div class="chart chart--sm"><canvas id="time-chart"></canvas></div></section>
 </div>
 
-<section class="card">
-  <h2 class="card__title">최근 분석 작업</h2>
-  <table class="table">
-    <thead><tr><th>작업 ID</th><th>요청 사용자</th><th>입력 방식</th><th>상태</th><th>인원</th><th>생성 시간</th><th></th></tr></thead>
-    <tbody>
-      {% for job in recent_jobs %}
-        <tr>
-          <td>#{{ job.id }}</td><td>{{ job.user.username }}</td><td>{{ job.get_input_type_display }}</td>
-          <td><span class="pill pill--{{ job.status|lower }}">{{ job.get_status_display }}</span></td>
-          <td>{{ job.person_count }}</td><td>{{ job.created_at|date:"m/d H:i" }}</td>
-          <td><a href="{% url 'analyses:detail' job.id %}">상세</a></td>
-        </tr>
-      {% empty %}<tr class="empty"><td colspan="7">아직 작업이 없습니다.</td></tr>{% endfor %}
-    </tbody>
-  </table>
+<section class="card" id="history">
+  {% include "analyses/_compare_cards.html" with scope_label="전체 사용자" %}
+  {% include "analyses/_history_table.html" with show_user=True %}
 </section>
 
 {{ chart_data|json_script:"chart-data" }}
@@ -51,4 +39,5 @@
 {% block scripts %}
 <script src="{% static 'vendor/chart.umd.min.js' %}"></script>{# Chart.js 4.6.1 (MIT) — 오프라인에서도 동작하도록 정적 파일로 포함 #}
 <script src="{% static 'js/dashboard.js' %}"></script>
+<script src="{% static 'js/analyses.js' %}"></script>{# 이력 표 입력 방식 필터 #}
 {% endblock %}

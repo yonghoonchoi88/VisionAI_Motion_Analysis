@@ -144,7 +144,8 @@ def dashboard(request):
         "users": get_user_model().objects.filter(analysis_jobs__isnull=False).distinct().count(),
     }
 
-    recent = AnalysisJob.objects.select_related("user").annotate(person_count=Count("predictions")).order_by("-created_at")[:10]
+    # ④ 입력 방식 비교 (전체 사용자) + 비교 열이 있는 최근 작업
+    all_jobs = list(AnalysisJob.objects.select_related("user").prefetch_related("predictions").order_by("-created_at"))
 
     return render(
         request,
@@ -152,7 +153,8 @@ def dashboard(request):
         {
             "chart_data": {"actions": action_chart, "status": status_chart, "inputs": input_chart},
             "summary": summary,
-            "recent_jobs": recent,
+            "recent_jobs": all_jobs[:20],
+            "comparison": input_type_comparison(all_jobs),
             "ai_health": check_health(),
             "fastapi_url": settings.FASTAPI_URL,
         },

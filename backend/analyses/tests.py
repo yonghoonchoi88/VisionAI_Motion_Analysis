@@ -205,6 +205,24 @@ class AnalysisApiTests(TestCase):
         self.assertEqual(dict(zip(data["status"]["keys"], data["status"]["values"]))["SUCCESS"], 1)
         self.assertEqual(r.context["summary"]["total_jobs"], 1)
 
+    def test_dashboard_compares_all_users(self):
+        """관리자 대시보드의 입력 방식 비교는 전체 사용자 기준 (분석 화면은 본인 기록만)."""
+        self.create_upload(expected_action="wave")                # 회원 A: 업로드 1건 (예측 2명)
+        self.client.force_login(self.b)
+        self.create_upload()                                       # 회원 B: 업로드 1건 (예측 2명)
+        mine = {r["key"]: r for r in self.client.get(reverse("analyses:index")).context["comparison"]}
+        self.assertEqual(mine["UPLOAD"]["jobs"], 1)                # B 화면에는 B 기록만
+
+        self.client.force_login(self.admin)
+        with mock.patch("analyses.page_views.check_health", return_value=None):
+            r = self.client.get(reverse("dashboard"))
+        rows = {c["key"]: c for c in r.context["comparison"]}
+        self.assertEqual((rows["UPLOAD"]["jobs"], rows["UPLOAD"]["predictions"]), (2, 4))
+        self.assertEqual((rows["UPLOAD"]["match"], rows["UPLOAD"]["labeled"]), (2, 2))   # 수행 동작을 고른 건 A만
+        self.assertContains(r, "요청 사용자")
+        self.assertContains(r, "전체 사용자")
+        self.assertContains(r, "student_b")
+
     def test_staff_can_see_all_jobs_in_api(self):
         self.create_upload()
         self.client.force_login(self.admin)

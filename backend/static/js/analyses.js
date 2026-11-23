@@ -34,6 +34,24 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
+  // ── 이력 표 입력 방식 필터 (분석 화면·관리자 대시보드 공용) ──────────
+  let currentFilter = "ALL";
+  function applyFilter() {
+    $$("#history-body tr[data-input]").forEach((tr) => {
+      tr.hidden = currentFilter !== "ALL" && tr.dataset.input !== currentFilter;
+    });
+    $$(".compare__card").forEach((card) => {
+      card.classList.toggle("is-dim", currentFilter !== "ALL" && !card.classList.contains(`compare__card--${currentFilter.toLowerCase()}`));
+    });
+  }
+  $$(".chip[data-filter]").forEach((chip) =>
+    chip.addEventListener("click", () => {
+      currentFilter = chip.dataset.filter;
+      $$(".chip[data-filter]").forEach((c) => c.classList.toggle("is-active", c === chip));
+      applyFilter();
+    })
+  );
+
   // ── 분석 화면 ─────────────────────────────────────────
   const app = $("#analysis-app");
   if (app) initAnalysisPage(app);
@@ -180,7 +198,7 @@
       const detail = app.dataset.detailUrl.replace("/0/", `/${jobId}/`);
       const expected = form.elements.expected_action;
       const expectedValue = expected.value;
-      const expectedText = expectedValue ? expected.options[expected.selectedIndex].text : "";
+      const expectedText = expectedValue ? `${expected.options[expected.selectedIndex].text.split(" ")[0]} ${expectedValue}` : "";   // 예: A006 wave
       const isCamera = inputType.value === "CAMERA";
 
       const preds = s.predictions.length
@@ -197,33 +215,15 @@
 
       const tr = document.createElement("tr");
       tr.dataset.input = inputType.value;
-      tr.innerHTML = `<td>${jobId}</td><td>${esc(form.elements.title.value || "(방금 요청)")}</td>
-        <td>${isCamera ? `IP Webcam <small class="muted">${esc(form.elements.capture_seconds?.value)}초</small>` : "영상 업로드"}</td>
-        <td>${expectedText ? esc(expectedText) : '<span class="muted">-</span>'}</td>
+      tr.innerHTML = `<td><a href="${detail}" title="상세 보기">#${jobId}</a></td><td>${esc(form.elements.title.value || "(방금 요청)")}</td>
+        <td class="nowrap">${isCamera ? `IP Webcam <small class="muted">${esc(form.elements.capture_seconds?.value)}초</small>` : "영상 업로드"}</td>
+        <td class="nowrap">${expectedText ? esc(expectedText) : '<span class="muted">-</span>'}</td>
         <td>${preds}</td><td>${time}</td>
         <td><span class="pill pill--${s.status.toLowerCase()}">${esc(s.status_display)}</span></td>
-        <td>방금</td><td><a href="${detail}">상세</a></td>`;
+        <td>방금</td>`;
       body.prepend(tr);
       applyFilter();
     }
-
-    // 입력 방식 필터 (전체 / 영상 업로드 / IP Webcam)
-    let currentFilter = "ALL";
-    function applyFilter() {
-      $$("#history-body tr[data-input]").forEach((tr) => {
-        tr.hidden = currentFilter !== "ALL" && tr.dataset.input !== currentFilter;
-      });
-      $$(".compare__card").forEach((card) => {
-        card.classList.toggle("is-dim", currentFilter !== "ALL" && !card.classList.contains(`compare__card--${currentFilter.toLowerCase()}`));
-      });
-    }
-    $$(".chip").forEach((chip) =>
-      chip.addEventListener("click", () => {
-        currentFilter = chip.dataset.filter;
-        $$(".chip").forEach((c) => c.classList.toggle("is-active", c === chip));
-        applyFilter();
-      })
-    );
 
     function setBusy(busy) {
       startBtn.disabled = busy;
