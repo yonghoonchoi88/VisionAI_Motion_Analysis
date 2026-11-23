@@ -83,6 +83,7 @@ class AnalysisApiTests(TestCase):
         self.assertEqual(job.stage, AnalysisJob.Stage.DONE)
         self.assertEqual(job.result_status, "OK")
         self.assertEqual(job.inference_time_sec, 1.23)
+        self.assertIsNotNone(job.processing_time_sec)               # Worker 구간은 단조 시계로 측정
         self.assertEqual(job.predictions.count(), 2)              # T04: 한 작업에 사람 2명
         self.assertTrue(Path(job.video_file.path).is_file())      # 영상은 MEDIA, DB에는 경로
 
@@ -208,6 +209,36 @@ class AnalysisApiTests(TestCase):
         self.create_upload()
         self.client.force_login(self.admin)
         self.assertEqual(self.client.get(self.list_url).json()["count"], 1)
+
+    def test_clock_adjustment_does_not_shrink_total_time(self):
+        """벽시계가 뒤로 조정돼도 전체 처리 시간이 실제 처리 시간보다 짧게 나오지 않는다 (#3 사례 재현)."""
+        from datetime import timedelta
+        from django.utils import timezone as dj_tz
+
+        def slow_predict(path):
+            time.sleep(0.3)                                       # 실제로 0.3초 걸리는 추론
+            return fake_result(1)
+
+        base = dj_tz.now()
+        fake_tz = mock.Mock()                                     # tasks 모듈이 보는 시계만 바꿈 (created_at은 실제 시계)
+        fake_tz.now.side_effect = [base + timedelta(seconds=0.01), base + timedelta(seconds=0.05)]  # 시작·완료 차이 0.04초
+        with mock.patch("analyses.tasks.timezone", fake_tz), \
+             mock.patch("analyses.tasks.predict_video", side_effect=slow_predict):
+            with self.captureOnCommitCallbacks(execute=True):
+                job_id = self.client.post(self.list_url, {"input_type": "UPLOAD", "video_file": video_upload()}).json()["id"]
+        job = AnalysisJob.objects.get(pk=job_id)
+        self.assertLess((job.finished_at - job.started_at).total_seconds(), 0.1)   # 벽시계로는 0.04초
+        self.assertGreaterEqual(job.processing_time_sec, 0.3)                       # 단조 시계로는 0.3초 이상
+        self.assertGreaterEqual(job.total_time_sec, 0.3)
+
+    def test_legacy_total_time_never_below_inference(self):
+        """processing_time_sec이 없는 이전 기록도 AI 추론 시간보다 짧게 표시하지 않는다."""
+        from datetime import timedelta
+        job = AnalysisJob.objects.create(user=self.a, input_type="UPLOAD", status="SUCCESS", inference_time_sec=2.361)
+        AnalysisJob.objects.filter(pk=job.pk).update(
+            started_at=job.created_at + timedelta(seconds=0.016), finished_at=job.created_at + timedelta(seconds=0.14))
+        job.refresh_from_db()
+        self.assertEqual(job.total_time_sec, 2.36)
 
     def test_index_compares_input_types(self):
         """과제 9-1 비교 화면: 입력 방식별 평균 신뢰도·선택 동작 일치율·처리 시간."""

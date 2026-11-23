@@ -106,8 +106,8 @@ class AnalysisJobSerializer(serializers.ModelSerializer):
             "id", "username", "display_title", "title", "memo",
             "input_type", "input_type_display", "video_url", "camera_url", "capture_seconds", "expected_action",
             "status", "status_display", "stage", "stage_display", "is_finished", "celery_task_id", "error_message",
-            "result_status", "result_message", "video_duration_sec", "video_fps", "inference_time_sec", "total_time_sec",
-            "created_at", "started_at", "finished_at", "status_url", "predictions",
+            "result_status", "result_message", "video_duration_sec", "video_fps", "inference_time_sec",
+            "processing_time_sec", "total_time_sec", "created_at", "started_at", "finished_at", "status_url", "predictions",
         ]
         read_only_fields = fields
 

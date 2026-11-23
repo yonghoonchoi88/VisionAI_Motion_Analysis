@@ -23,7 +23,7 @@ class AnalysisJobAdmin(admin.ModelAdmin):
     list_select_related = ("user",)
     readonly_fields = (
         "celery_task_id", "status", "stage", "error_message", "result_status", "result_message",
-        "video_duration_sec", "video_fps", "inference_time_sec", "created_at", "started_at", "finished_at",
+        "video_duration_sec", "video_fps", "inference_time_sec", "processing_time_sec", "created_at", "started_at", "finished_at",
     )
     inlines = [PersonPredictionInline]
 

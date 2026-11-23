@@ -12,6 +12,7 @@ run_analysis(job_id)
 from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
 
 from celery import shared_task
@@ -42,6 +43,7 @@ def run_analysis(self, job_id: int) -> str:
         return job.status
 
     _update(job, status=AnalysisJob.Status.STARTED, started_at=job.started_at or timezone.now(), error_message="")
+    t0 = time.monotonic()                       # 경과 시간은 단조 시계로 (벽시계는 조정될 수 있음)
 
     try:
         video_path = _acquire_video(job)
@@ -52,12 +54,12 @@ def run_analysis(self, job_id: int) -> str:
         if self.request.retries < MAX_RETRIES and not getattr(self.request, "is_eager", False):
             _update(job, stage=AnalysisJob.Stage.QUEUED, error_message=f"재시도 대기 중: {e}")
             raise self.retry(exc=e, countdown=RETRY_DELAY_SECONDS)
-        return _fail(job, str(e))
+        return _fail(job, str(e), t0)
     except (CameraCaptureError, InferenceError) as e:
-        return _fail(job, str(e))
+        return _fail(job, str(e), t0)
     except Exception as e:  # noqa: BLE001 - 예상 못한 오류도 반드시 FAILURE로 기록
         logger.exception("job %s failed unexpectedly", job_id)
-        return _fail(job, f"처리 중 알 수 없는 오류가 발생했습니다: {type(e).__name__}")
+        return _fail(job, f"처리 중 알 수 없는 오류가 발생했습니다: {type(e).__name__}", t0)
 
     with transaction.atomic():
         job.predictions.all().delete()          # 재실행 시 중복 방지
@@ -71,6 +73,7 @@ def run_analysis(self, job_id: int) -> str:
             video_duration_sec=result.video.get("duration_sec"),
             video_fps=result.video.get("fps"),
             inference_time_sec=result.processing_time_sec,
+            processing_time_sec=round(time.monotonic() - t0, 3),
             error_message="",
             finished_at=timezone.now(),
         )
@@ -109,12 +112,13 @@ def _to_prediction(job: AnalysisJob, p: dict) -> PersonPrediction:
     )
 
 
-def _fail(job: AnalysisJob, message: str) -> str:
+def _fail(job: AnalysisJob, message: str, t0: float | None = None) -> str:
     _update(
         job,
         status=AnalysisJob.Status.FAILURE,
         stage=AnalysisJob.Stage.DONE,
         error_message=message[:1000],
+        processing_time_sec=round(time.monotonic() - t0, 3) if t0 is not None else None,
         finished_at=timezone.now(),
     )
     logger.warning("job %s FAILURE: %s", job.pk, message)

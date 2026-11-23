@@ -57,6 +57,10 @@ class AnalysisJob(models.Model):
     video_duration_sec = models.FloatField("영상 길이(초)", null=True, blank=True)
     video_fps = models.FloatField("영상 FPS", null=True, blank=True)
     inference_time_sec = models.FloatField("AI 추론 시간(초)", null=True, blank=True)
+    processing_time_sec = models.FloatField(
+        "Worker 처리 시간(초)", null=True, blank=True,
+        help_text="영상 확보·추론·저장에 걸린 시간. 벽시계 조정의 영향을 받지 않는 단조 시계로 측정",
+    )
 
     # ── 시간 ──────────────────────────────────────────────
     created_at = models.DateTimeField("요청 시각", auto_now_add=True, db_index=True)
@@ -78,10 +82,20 @@ class AnalysisJob(models.Model):
 
     @property
     def total_time_sec(self) -> float | None:
-        """요청부터 완료까지 걸린 전체 시간 (수집·대기·추론 포함)."""
-        if self.finished_at and self.created_at:
-            return round((self.finished_at - self.created_at).total_seconds(), 2)
-        return None
+        """요청부터 완료까지 걸린 전체 시간 = 대기(생성→시작) + Worker 처리 시간.
+
+        경과 시간은 벽시계 두 시각의 차로 재면 안 된다. WSL2·Docker는 호스트 시계와 동기화하며
+        시각을 순간적으로 조정할 수 있어, finished_at - created_at이 AI 추론 시간보다 짧게 나온 사례가 있었다.
+        그래서 Worker 구간은 단조 시계로 잰 processing_time_sec을 쓴다.
+        """
+        if not (self.finished_at and self.created_at):
+            return None
+        if self.processing_time_sec is not None and self.started_at:
+            queued = max(0.0, (self.started_at - self.created_at).total_seconds())
+            return round(queued + self.processing_time_sec, 2)
+        # 이전 기록(processing_time_sec 없음): 벽시계 차를 쓰되 AI 추론 시간보다 짧을 수는 없으므로 하한 적용
+        wall = (self.finished_at - self.created_at).total_seconds()
+        return round(max(wall, self.inference_time_sec or 0.0), 2)
 
     @property
     def display_title(self) -> str:
