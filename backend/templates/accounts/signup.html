@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}회원가입 · Vision AI{% endblock %}
+{% block content %}
+<section class="auth card">
+  <h1 class="card__title">회원가입</h1>
+  <form method="post" class="form" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <label class="field{% if field.errors %} field--error{% endif %}">
+        <span>{{ field.label }}</span>
+        {{ field }}
+        {% for e in field.errors %}<small class="error">{{ e }}</small>{% endfor %}
+        {% if field.help_text and not field.errors %}<small class="hint">{{ field.help_text|striptags|truncatechars:90 }}</small>{% endif %}
+      </label>
+    {% endfor %}
+    <button class="btn btn--block">가입하고 시작하기</button>
+  </form>
+  <p class="muted center">이미 계정이 있나요? <a href="{% url 'login' %}">로그인</a></p>
+</section>
+{% endblock %}

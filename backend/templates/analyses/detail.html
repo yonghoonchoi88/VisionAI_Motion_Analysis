@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}분석 #{{ job.id }} · Vision AI{% endblock %}
+{% block content %}
+<div class="page-head page-head--row">
+  <div>
+    <a href="{% url 'analyses:index' %}" class="muted">← 분석 화면</a>
+    <h1 class="page-title">분석 #{{ job.id }} <span class="pill pill--{{ job.status|lower }}">{{ job.get_status_display }}</span></h1>
+  </div>
+  {% if job.is_finished %}<button class="btn btn--danger btn--sm" id="delete-btn">삭제</button>{% endif %}
+</div>
+
+<div class="grid grid--main" id="detail-app" data-job-url="{% url 'analysisjob-detail' job.id %}" data-index-url="{% url 'analyses:index' %}">
+  <section class="card">
+    <h2 class="card__title">요청 정보</h2>
+    <dl class="meta">
+      <dt>요청자</dt><dd>{{ job.user.username }}</dd>
+      <dt>입력 방식</dt><dd>{{ job.get_input_type_display }}{% if job.capture_seconds %} · {{ job.capture_seconds }}초 수집{% endif %}</dd>
+      <dt>수행한 동작</dt><dd>{{ job.get_expected_action_display|default:"선택 안 함" }}</dd>
+      <dt>요청 시각</dt><dd>{{ job.created_at|date:"Y-m-d H:i:s" }}</dd>
+      <dt>영상 길이</dt><dd>{% if job.video_duration_sec %}{{ job.video_duration_sec|floatformat:1 }}초 ({{ job.video_fps|floatformat:1 }} fps){% else %}-{% endif %}</dd>
+      <dt>AI 추론 시간</dt><dd>{% if job.inference_time_sec %}{{ job.inference_time_sec|floatformat:2 }}초{% else %}-{% endif %}</dd>
+      <dt>전체 처리 시간</dt><dd>{% if job.total_time_sec %}{{ job.total_time_sec|floatformat:2 }}초{% else %}-{% endif %}</dd>
+      <dt>Celery task</dt><dd><code>{{ job.celery_task_id|default:"-" }}</code></dd>
+    </dl>
+    {% if job.error_message %}<div class="alert alert--error">{{ job.error_message }}</div>{% endif %}
+    {% if job.result_message %}<div class="alert alert--info">{{ job.result_message }}</div>{% endif %}
+    {% if job.video_file %}<video class="preview" src="{{ job.video_file.url }}" controls muted></video>{% endif %}
+
+    <form id="edit-form" class="form">
+      <label class="field"><span>제목</span><input type="text" name="title" maxlength="100" value="{{ job.title }}"></label>
+      <label class="field"><span>메모</span><textarea name="memo" rows="3">{{ job.memo }}</textarea></label>
+      <div class="form-actions"><button class="btn btn--sm">제목·메모 저장</button><span class="hint" id="edit-msg"></span></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2 class="card__title">사람별 예측 ({{ job.predictions.all|length }}명)</h2>
+    {% for p in job.predictions.all %}
+      <article class="person">
+        <header class="person__head">
+          <strong>Track {{ p.track_id }}</strong>
+          <span>{{ p.action_id }} {{ p.action_label }}</span>
+          <span class="pill {% if p.is_uncertain %}pill--warn{% else %}pill--success{% endif %}">
+            {% if p.is_uncertain %}판단 불확실 {% endif %}{% widthratio p.confidence 1 100 %}%
+          </span>
+          {% if job.expected_action %}
+            {% if job.expected_action == p.action_label %}<span class="pill pill--success">선택 동작과 일치</span>
+            {% else %}<span class="pill pill--muted">선택 동작과 다름</span>{% endif %}
+          {% endif %}
+        </header>
+        <p class="hint">Window {{ p.window_count }}개 ({{ p.window_mode }}) · 등장 {{ p.duration_sec|floatformat:1 }}초 · 유효 Frame {% widthratio p.valid_frame_ratio 1 100 %}%</p>
+        <ul class="probs">
+          {% for label, prob in p.probabilities.items %}
+            <li><span>{{ label }}</span><span class="bar"><i style="width: {% widthratio prob 1 100 %}%"></i></span><span>{% widthratio prob 1 100 %}%</span></li>
+          {% endfor %}
+        </ul>
+      </article>
+    {% empty %}
+      <p class="muted">예측 결과가 없습니다.</p>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/analyses.js' %}"></script>{% endblock %}

@@ -1,17 +1,23 @@
-# 비밀 정보
+# 비밀값
 .env
 
-# 파이썬 환경·캐시
-.venv/
+# Python
 __pycache__/
 *.pyc
+.venv/
+.pytest_cache/
 
-# 모델 가중치 (README '모델 준비'에 복사 방법 기록)
+# 대용량 모델 (README의 '모델 준비' 참고)
 *.joblib
 *.pt
 
-# 실행 중에 생기는 파일
+# 실행 중 생성되는 파일
 backend/media/
 backend/staticfiles/
-*.mp4
-*.avi
+backend/db.sqlite3
+
+# 편집기·OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

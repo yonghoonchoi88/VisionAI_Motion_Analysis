@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}동작 분석 · Vision AI{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 class="page-title">Vision AI 동작 분석</h1>
+  <p class="muted">영상을 올리거나 IP Webcam으로 짧게 촬영하면, 사람마다 6개 동작 중 하나를 예측합니다.</p>
+</div>
+
+<div class="grid grid--main"
+     id="analysis-app"
+     data-api-url="{% url 'analysisjob-list' %}"
+     data-detail-url="{% url 'analyses:detail' 0 %}"
+     data-max-upload-mb="{{ max_upload_mb }}">
+
+  <!-- ① 입력 -->
+  <section class="card">
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab is-active" data-tab="UPLOAD" role="tab">영상 업로드</button>
+      <button type="button" class="tab" data-tab="CAMERA" role="tab">IP Webcam</button>
+    </div>
+
+    <form id="analysis-form" class="form" novalidate>
+      <input type="hidden" name="input_type" value="UPLOAD">
+
+      <div class="tab-panel" data-panel="UPLOAD">
+        <label class="dropzone" id="dropzone">
+          <input type="file" name="video_file" accept="{{ allowed_ext }},video/*" hidden>
+          <span class="dropzone__icon" aria-hidden="true">⬆</span>
+          <strong>MP4 영상을 끌어 놓거나 클릭해서 선택</strong>
+          <small class="muted">{{ allowed_ext }} · 최대 {{ max_upload_mb }}MB · 한 동작을 담은 짧은 영상 권장</small>
+        </label>
+        <video id="upload-preview" class="preview" controls muted hidden></video>
+      </div>
+
+      <div class="tab-panel" data-panel="CAMERA" hidden>
+        {% if allowed_cameras %}
+          <label class="field">
+            <span>카메라 주소 <small class="muted">(허용된 카메라만 사용 가능)</small></span>
+            <input type="url" name="camera_url" list="camera-list" placeholder="http://{{ allowed_cameras.0 }}/video" value="http://{{ allowed_cameras.0 }}/video">
+            <datalist id="camera-list">
+              {% for host in allowed_cameras %}<option value="http://{{ host }}/video">{% endfor %}
+            </datalist>
+          </label>
+          <div class="camera-preview">
+            <img id="camera-preview" alt="IP Webcam 미리보기" hidden>
+            <button type="button" class="btn btn--ghost btn--sm" id="camera-preview-btn">미리보기 켜기</button>
+          </div>
+          <label class="field">
+            <span>수집 시간: <strong id="capture-seconds-label">{{ capture_default }}</strong>초</span>
+            <input type="range" name="capture_seconds" min="{{ capture_min }}" max="{{ capture_max }}" value="{{ capture_default }}">
+            <small class="hint">‘AI 분석 시작’을 누른 뒤 이 시간 동안 카메라 앞에서 동작하세요. (연결·추론 시간은 별도)</small>
+          </label>
+        {% else %}
+          <div class="alert alert--warning">허용된 카메라가 없습니다. <code>.env</code>의 <code>ALLOWED_CAMERA_HOSTS</code>에 휴대폰 IP Webcam 주소(예: 192.168.0.10:8080)를 등록하세요.</div>
+        {% endif %}
+      </div>
+
+      <div class="form-row">
+        <label class="field">
+          <span>제목 <small class="muted">(선택)</small></span>
+          <input type="text" name="title" maxlength="100" placeholder="예: 손 흔들기 테스트 1">
+        </label>
+        <label class="field">
+          <span>수행한 동작 <small class="muted">(선택, 비교용)</small></span>
+          <select name="expected_action">
+            <option value="">선택 안 함</option>
+            {% for label, aid, ko in actions %}<option value="{{ label }}">{{ aid }} {{ ko }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <div id="form-error" class="alert alert--error" hidden></div>
+      <button type="submit" class="btn btn--primary btn--lg btn--block" id="start-btn">▶ AI 분석 시작</button>
+    </form>
+  </section>
+
+  <!-- ② 상태 + 결과 -->
+  <div class="stack">
+    <section class="card">
+      <h2 class="card__title">분석 상태 <small class="muted" id="job-label"></small></h2>
+      <ol class="stepper" id="stepper">
+        <li data-step="QUEUED">대기</li>
+        <li data-step="CAPTURING">영상 수집</li>
+        <li data-step="INFERRING">AI 분석</li>
+        <li data-step="DONE">완료</li>
+      </ol>
+      <p class="status-line" id="status-line">분석을 시작하면 진행 상황이 여기에 표시됩니다.</p>
+    </section>
+
+    <section class="card">
+      <h2 class="card__title">분석 결과</h2>
+      <table class="table" id="result-table">
+        <thead><tr><th>Track ID</th><th>예측 동작</th><th>신뢰도</th><th>입력 품질</th></tr></thead>
+        <tbody><tr class="empty"><td colspan="4">아직 결과가 없습니다.</td></tr></tbody>
+      </table>
+      <p class="hint">신뢰도 55% 미만은 <span class="pill pill--warn">판단 불확실</span>로 표시합니다. 학습하지 않은 동작도 6개 중 하나로 예측될 수 있습니다.</p>
+    </section>
+  </div>
+</div>
+
+<!-- ③ 최근 이력 -->
+<section class="card">
+  <h2 class="card__title">최근 분석 이력</h2>
+  <table class="table">
+    <thead><tr><th>#</th><th>제목</th><th>입력 방식</th><th>상태</th><th>인원</th><th>요청 시각</th><th></th></tr></thead>
+    <tbody id="history-body">
+      {% for job in recent_jobs %}
+        <tr>
+          <td>{{ job.id }}</td>
+          <td>{{ job.display_title|truncatechars:40 }}</td>
+          <td>{{ job.get_input_type_display }}</td>
+          <td><span class="pill pill--{{ job.status|lower }}">{{ job.get_status_display }}</span></td>
+          <td>{{ job.person_count }}</td>
+          <td>{{ job.created_at|date:"m/d H:i:s" }}</td>
+          <td><a href="{% url 'analyses:detail' job.id %}">상세</a></td>
+        </tr>
+      {% empty %}
+        <tr class="empty"><td colspan="7">아직 분석 이력이 없습니다.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/analyses.js' %}"></script>{% endblock %}

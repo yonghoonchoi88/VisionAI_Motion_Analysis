@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}관리자 대시보드 · Vision AI{% endblock %}
+{% block content %}
+<div class="page-head page-head--row">
+  <div>
+    <h1 class="page-title">Vision AI 관리자 대시보드</h1>
+    <p class="muted">Django ORM으로 PostgreSQL의 분석 기록을 집계합니다.</p>
+  </div>
+  <div class="health {% if ai_health and ai_health.model_ready %}health--ok{% else %}health--bad{% endif %}">
+    AI 서버
+    {% if ai_health and ai_health.model_ready %}정상 · {{ ai_health.device }} · {{ ai_health.window_strategy }}
+    {% elif ai_health %}모델 준비 안 됨{% else %}연결 안 됨 ({{ fastapi_url }}){% endif %}
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><span>전체 작업</span><strong>{{ summary.total_jobs }}</strong></div>
+  <div class="kpi"><span>성공률</span><strong>{% if summary.success_rate is not None %}{{ summary.success_rate }}%{% else %}-{% endif %}</strong></div>
+  <div class="kpi"><span>사람별 예측</span><strong>{{ summary.total_predictions }}</strong></div>
+  <div class="kpi"><span>판단 불확실 비율</span><strong>{% if summary.uncertain_rate is not None %}{{ summary.uncertain_rate }}%{% else %}-{% endif %}</strong></div>
+  <div class="kpi"><span>요청 사용자</span><strong>{{ summary.users }}</strong></div>
+</div>
+
+<div class="grid grid--2">
+  <section class="card"><h2 class="card__title">동작별 예측 건수</h2><div class="chart"><canvas id="action-chart"></canvas></div></section>
+  <section class="card"><h2 class="card__title">분석 작업 상태별 건수</h2><div class="chart"><canvas id="status-chart"></canvas></div></section>
+  <section class="card"><h2 class="card__title">입력 방식별 비율 <small class="muted">(선택)</small></h2><div class="chart chart--sm"><canvas id="input-chart"></canvas></div></section>
+  <section class="card"><h2 class="card__title">입력 방식별 평균 AI 추론 시간 <small class="muted">(선택, 성공 작업)</small></h2><div class="chart chart--sm"><canvas id="time-chart"></canvas></div></section>
+</div>
+
+<section class="card">
+  <h2 class="card__title">최근 분석 작업</h2>
+  <table class="table">
+    <thead><tr><th>작업 ID</th><th>요청 사용자</th><th>입력 방식</th><th>상태</th><th>인원</th><th>생성 시간</th><th></th></tr></thead>
+    <tbody>
+      {% for job in recent_jobs %}
+        <tr>
+          <td>#{{ job.id }}</td><td>{{ job.user.username }}</td><td>{{ job.get_input_type_display }}</td>
+          <td><span class="pill pill--{{ job.status|lower }}">{{ job.get_status_display }}</span></td>
+          <td>{{ job.person_count }}</td><td>{{ job.created_at|date:"m/d H:i" }}</td>
+          <td><a href="{% url 'analyses:detail' job.id %}">상세</a></td>
+        </tr>
+      {% empty %}<tr class="empty"><td colspan="7">아직 작업이 없습니다.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{{ chart_data|json_script:"chart-data" }}
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'vendor/chart.umd.min.js' %}"></script>{# Chart.js 4.6.1 (MIT) — 오프라인에서도 동작하도록 정적 파일로 포함 #}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,9 @@
+14 objects imported automatically (use -v 2 for details).
+
+AnalysisJob     : 5
+PersonPrediction: 5
+  #1 영상 업로드 SUCCESS OK
+  #2 영상 업로드 FAILURE [VIDEO_UNREADABLE] 영상을 열 수 없습니다. 손상되었거나 
+  #3 영상 업로드 SUCCESS OK
+  #4 영상 업로드 SUCCESS OK
+  #5 영상 업로드 SUCCESS OK

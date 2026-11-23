@@ -9,8 +9,8 @@ from services.pose_pipeline import VideoReadError
 
 
 def test_two_people_get_separate_tracks(make_pipeline, make_video):
-    """T04: 두 사람이 계속 보이면 Track ID별로 분리되고 sliding Window가 만들어진다."""
-    pipe = make_pipeline(lambda i: {1: 150, 2: 450})
+    """T04: 두 사람이 계속 보이면 Track ID별로 분리된다 (sliding 전략으로 Window 생성까지 확인)."""
+    pipe = make_pipeline(lambda i: {1: 150, 2: 450}, window_strategy="sliding")
     out = pipe.run(make_video(seconds=6))
 
     assert [t.track_id for t in out.tracks] == [1, 2]
