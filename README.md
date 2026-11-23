@@ -365,23 +365,69 @@ sequenceDiagram
 
 ## 프로젝트 구조
 
+과제 문서의 권장 구성을 모두 갖추고, 필요한 파일을 `[추가]`했습니다.
+`[자동]` Django 생성 · `[수정]` 생성 후 수정 · `[작성]` 직접 작성 · `[복사]` 원본 실습에서 복사
+
 ```text
 VisionAI_Motion_Analysis/
-├── backend/                      Django·DRF·Celery (같은 Dockerfile로 django·celery 실행)
-│   ├── config/                   settings · urls · celery
-│   ├── accounts/                 회원가입·로그인 (Django 기본 User)
-│   ├── analyses/                 models · serializers · views(API) · page_views(화면·대시보드)
-│   │                             tasks · services · camera_capture · admin · constants · tests
-│   ├── templates/                base · login · signup · index · detail · dashboard
-│   ├── static/                   app.css · analyses.js · dashboard.js · vendor/chart.umd.min.js (오프라인 동작)
-│   └── Dockerfile · requirements.txt
-├── ai_service/                   FastAPI 추론 서버
-│   ├── main.py · routers/predictions.py
-│   ├── services/                 model_loader · pose_pipeline · action_inference
-│   ├── src/                      원본 실습 코드 5개 (수정 없음)
-│   ├── models/                   joblib·pt (Git 제외) + JSON 2개
-│   └── project.json · tests/ · Dockerfile · requirements.txt
-├── reports/evidence/             T01~T10 증거 · A/B 실험 기록 · screenshots/
-├── compose.yaml · .env.example · .gitignore
-└── README.md
+├── backend/                  Django·DRF + Celery Worker 공용
+│   ├── manage.py             [자동] 실행·마이그레이션 진입점
+│   ├── config/
+│   │   ├── __init__.py       [수정] 시작 시 Celery 앱 연결
+│   │   ├── settings.py       [수정] DB·DRF·미디어·Celery·카메라 허용 목록
+│   │   ├── urls.py           [수정] admin·accounts·analyses·api·dashboard
+│   │   ├── celery.py         [작성] Celery 앱, tasks.py 자동 탐색
+│   │   └── wsgi.py·asgi.py   [자동]
+│   ├── accounts/             Django 기본 User 사용
+│   │   ├── views.py          [수정] 회원가입 + 가입 직후 자동 로그인
+│   │   ├── urls.py           [작성] signup·login·logout
+│   │   ├── tests.py          [수정] 가입·로그인·비로그인 차단 (4개)
+│   │   └── models·admin·apps·migrations   [자동]
+│   ├── analyses/
+│   │   ├── models.py         [수정] AnalysisJob·PersonPrediction
+│   │   ├── migrations/       [자동] 0001_initial.py
+│   │   ├── serializers.py    [작성] 입력 검사, 제목·메모만 수정 허용
+│   │   ├── views.py          [수정] DRF CRUD·상태 조회·본인만(404)
+│   │   ├── urls.py           [작성] 분석·상세 화면 URL
+│   │   ├── api_urls.py       [추가] DRF Router — 화면/API 주소 분리
+│   │   ├── page_views.py     [작성] 화면 + /dashboard/ ORM 집계
+│   │   ├── tasks.py          [작성] 영상 확보→FastAPI→ORM 저장·재시도
+│   │   ├── services.py       [작성] FastAPI 호출, 응답·오류 분류
+│   │   ├── camera_capture.py [작성] 허용 카메라 N초 → WebM 저장
+│   │   ├── admin.py          [수정] 목록·검색·필터, 예측 Inline
+│   │   ├── constants.py      [추가] A001~A006 Action 표
+│   │   └── tests.py          [수정] T02·T04~T09 + 카메라 (18개)
+│   ├── templates/
+│   │   ├── base.html         [작성] 공통 레이아웃·메뉴
+│   │   ├── registration/login.html · accounts/signup.html   [작성]
+│   │   └── analyses/
+│   │       ├── index.html    [작성] 입력 탭·진행 단계·결과·이력
+│   │       ├── detail.html   [추가] 영상 재생·Class별 확률·수정·삭제
+│   │       └── dashboard.html  [작성] KPI 5 + 차트 4 + 최근 작업
+│   ├── static/
+│   │   ├── css/app.css       [작성] 공통 스타일
+│   │   ├── js/analyses.js    [작성] POST·1초 폴링·결과 표시
+│   │   ├── js/dashboard.js   [작성] ORM 집계 → Chart.js
+│   │   └── vendor/           [추가] Chart.js 4.6.1 (오프라인 동작)
+│   ├── requirements.txt      [작성] Django·DRF·celery[redis]·psycopg
+│   └── Dockerfile            [작성] django·celery 공용 이미지
+├── ai_service/               FastAPI 추론 서버
+│   ├── main.py               [작성] 시작 시 모델 로드·Warm-up
+│   ├── routers/
+│   │   └── predictions.py    [작성] /health · /predict/video
+│   ├── services/
+│   │   ├── model_loader.py   [작성] 3개 산출물 로드 + 교차 검증 (T01)
+│   │   ├── pose_pipeline.py  [작성] YOLO·ByteTrack → 사람별 30 Step
+│   │   └── action_inference.py  [작성] RF 예측·Confidence·불확실
+│   ├── src/                  [복사] 원본 실습 코드 5개 (수정 없음)
+│   ├── project.json          [복사] Pose·Window·Tracking 설정 통합
+│   ├── models/               [복사] joblib·pt (Git 제외) + JSON 2개
+│   ├── tests/                [추가] 모델·파이프라인·API 테스트 (24개)
+│   ├── requirements.txt      [작성] 학습 환경과 같은 버전 고정
+│   └── Dockerfile            [작성] CPU 추론 이미지
+├── reports/evidence/         [추가] T01~T10 증거·A/B 실험·캡처
+├── compose.yaml              [작성] 5개 서비스·healthcheck·볼륨
+├── .env.example              [작성] 변수 이름과 예시 값
+├── .gitignore                [작성] .env·가상환경·모델 파일 제외
+└── README.md                 [작성]
 ```
