@@ -3,7 +3,7 @@
 > 6일차에 학습한 **6개 동작 인식 Random Forest**를 재학습 없이 재사용한 Vision AI 웹 서비스
 > Django · DRF · Celery · Redis · PostgreSQL · FastAPI · Docker Compose
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB) ![Django](https://img.shields.io/badge/Django-6.1-092E20) ![FastAPI](https://img.shields.io/badge/FastAPI-009688) ![Celery](https://img.shields.io/badge/Celery-5.7-37814A) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1) ![Docker](https://img.shields.io/badge/Docker_Compose-5_services-2496ED) ![Tests](https://img.shields.io/badge/tests-53_passed-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB) ![Django](https://img.shields.io/badge/Django-6.1-092E20) ![FastAPI](https://img.shields.io/badge/FastAPI-009688) ![Celery](https://img.shields.io/badge/Celery-5.7-37814A) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1) ![Docker](https://img.shields.io/badge/Docker_Compose-5_services-2496ED) ![Tests](https://img.shields.io/badge/tests-75_passed-brightgreen)
 
 ---
 
@@ -15,19 +15,26 @@
 |---|---|---|---|---|---|
 | 허리 굽혔다 펴기 | 한쪽 다리 들었다 내리기 | 걷다가 방향 바꿔 걷기 | 음료 마신 뒤 돌아오기 | 앉았다 일어나기 | 손 흔들기 |
 
-> 학습 데이터가 3명 × 6동작뿐이라 예측은 **정답이나 위험행동 판정이 아닙니다.** 모든 결과에 Confidence · Class별 확률 · 입력 품질을 함께 보여 주고, 0.55 미만은 **판단 불확실**로 표시합니다.
+> 6일차 모델은 **S01 한 사람의 영상 6개**로 학습했기 때문에 예측은 **정답이나 위험행동 판정이 아닙니다.** 모든 결과에 Confidence · **2등과의 확률 차이** · Class별 확률 · 입력 품질을 함께 보여 주고, 1등 확률이 낮거나 2등과 붙어 있으면 **판단 불확실**로 표시합니다. 기준값은 학습하지 않은 사람(S02)으로만 골랐습니다 → [7. Held-out 검증](#모델-재사용-검증--학습하지-않은-사람-held-out)
 
 ---
 
 ## 2. 실행 방법
 
-**① 모델 준비** — `*.joblib`, `*.pt`는 용량 때문에 Git에서 제외합니다. 원본 실습에서 `ai_service/models/`로 복사하세요.
+**① 모델 준비** — `*.joblib`, `*.pt`는 Git에서 제외합니다. 원본 실습에서 `ai_service/models/`로 복사하세요.
 
 | 파일 | 원본 위치 |
 |---|---|
 | `rf_action_baseline.joblib` | `subject10_pose_action/artifacts/day06/` (`scripts/35_train_rf_baseline.py`가 저장) |
 | `yolo11n-pose.pt` | `subject10_pose_action/` |
-| `rf_feature_columns.json`, `rf_training_info.json` | 저장소에 포함됨 |
+| `rf_feature_columns.json`, `rf_training_info.json`, `SHA256SUMS.txt` | 저장소에 포함됨 |
+
+`joblib.load()`는 pickle을 실행하므로, AI 서버는 **`SHA256SUMS.txt`의 해시와 같은 파일만** 엽니다. 다른 실행에서 나온 joblib을 넣으면 시작 단계에서 거부합니다.
+
+```bash
+cd ai_service
+python -m services.model_loader      # T01: 3개 파일 교차 검증 + SHA256 확인 → [T01 PASS] · SHA256 verified: True
+```
 
 **② 실행**
 
@@ -95,7 +102,9 @@ Django는 작업을 DB에 저장하고 **커밋이 끝난 뒤** Celery에 등록
 | Pose · 추적 | `yolo11n-pose.pt` + ByteTrack, 원본 `src/` 5개를 수정 없이 재사용 |
 | 업로드 영상 | `.mp4 .avi .mov .mkv .webm`, 최대 200MB · 60초 |
 | IP Webcam | 허용 목록의 카메라만, **5~10초(기본 8초)** 수집 → 30fps · 640px WebM 저장 → 업로드와 같은 추론 |
-| FastAPI 입출력 | `POST /predict/video` (영상 파일) → 사람별 `track_id` · `action_id` · `confidence` · 확률 · 입력 품질 + 처리 시간 |
+| Window 전략 | `auto`: 사람이 보인 시간 ≤ 12초면 학습과 같은 **전체 구간 1개**, 길면 5초 sliding Window 평균 (`hybrid` 등 4가지 중 S02로 선택) |
+| 판단 불확실 | `confidence < min_confidence` **또는** `1등 − 2등 < min_margin` (`ai_service/project.json`의 `decision`, S02로 선택) |
+| FastAPI 입출력 | `POST /predict/video` (영상 파일) → 사람별 `track_id` · `action_id` · `confidence` · `margin`(2등과 차이) · 확률 · 입력 품질 + 적용한 판단 기준 · 처리 시간 |
 
 > 응답 형식과 오류 코드 → [`docs/api.md`](docs/api.md)
 
@@ -123,12 +132,30 @@ Django는 작업을 DB에 저장하고 **커밋이 끝난 뒤** Celery에 등록
 
 </details>
 
+### 모델 재사용 검증 — 학습하지 않은 사람 (Held-out)
+
+학습 영상(S01, day04 원본)으로 확인하면 맞히는 것이 당연합니다. 그래서 **서비스와 같은 코드**로 학습에 쓰지 않은 사람의 영상을 따로 평가했습니다.
+
+| 원칙 | 내용 |
+|---|---|
+| 선택 | Window 전략 4가지와 판단 기준을 **S02(검증용 사람)로만** 고름 |
+| 보고 | **S03(테스트용 사람)**은 고른 설정을 한 번 적용한 결과만 보고 (S03으로 튜닝하지 않음) |
+| 판단 기준 점수 | 확정한 정답 − 2 × 확정한 오답 → 틀린 답을 확정하느니 보류 |
+| 미학습 동작 | SBU 악수 영상의 예측은 모두 '불확실'이어야 통과 |
+
+결과 표와 영상별 판정: [`reports/evidence/holdout/holdout_eval.md`](reports/evidence/holdout/holdout_eval.md) · 원본 예측: [`predictions.csv`](reports/evidence/holdout/predictions.csv)
+
+```bash
+cd ai_service
+python -m scripts.evaluate_holdout --videos <subject10_pose_action>/data/day05/videos --negatives <SBU 영상 폴더>
+```
+
 ### 기능 테스트
 
 | 테스트 | 결과 | 증거 |
 |---|---|---|
-| T01 모델 불러오기 | ✅ 6 Class · 1,140 Feature · 교차 검증 | [`T01_model_load.txt`](reports/evidence/T01_model_load.txt) |
-| T02 영상 업로드 | ✅ 원본 동작 영상 6/6 정답 | [`ab_window_strategy.md`](reports/evidence/ab_window_strategy.md) |
+| T01 모델 불러오기 | ✅ 6 Class · 1,140 Feature · 교차 검증 · **SHA256 확인 후 로드** | [`T01_model_load.txt`](reports/evidence/T01_model_load.txt) |
+| T02 영상 업로드 | ✅ 작업 등록 → 결과 저장. 정확도는 학습 원본(6/6, 이관 회귀 확인용)이 아니라 **Held-out**으로 판단 | [`ab_window_strategy.md`](reports/evidence/ab_window_strategy.md) · [`holdout_eval.md`](reports/evidence/holdout/holdout_eval.md) |
 | T03 IP Webcam | ✅ 8초 수집 → wave 1순위 (3회 일관) | [`ab_capture_condition.md`](reports/evidence/ab_capture_condition.md) |
 | T04 사람별 결과 | ✅ 2인 영상 → Track별 예측 분리 | [`01_sbu_shaking_hands.json`](reports/evidence/T02_T04/01_sbu_shaking_hands.json) |
 | T05 · T06 비동기 · 영구 저장 | ✅ 즉시 202 + 작업 ID, 새로고침 후 유지 | 자동 테스트 |
@@ -137,7 +164,17 @@ Django는 작업을 DB에 저장하고 **커밋이 끝난 뒤** Celery에 등록
 | T09 예외 처리 | ✅ 손상 파일 · 카메라 끊김 · AI 서버 장애 → FAILURE + 사유 | 위 캡처 · 자동 테스트 |
 | T10 Docker | ✅ `docker compose restart` 후 작업 · 예측 유지 | [`T10_after_restart.txt`](reports/evidence/T10_after_restart.txt) |
 
-자동 테스트 53개 (FastAPI 24 · Django 29) — [`docs/development.md`](docs/development.md)
+자동 테스트 75개 (FastAPI 44 · Django 31) — [`docs/development.md`](docs/development.md)
+
+### 설계 결정 — 교재 방식과 다르게 한 점
+
+| 항목 | 교재 · 6~8일차 | 이 서비스 | 근거 |
+|---|---|---|---|
+| 추론 입력 구간 | 7일차 5초 sliding Window 평균 | 사람이 보인 구간 ≤ 12초면 **전체 구간 1개** (6일차 학습과 같은 입력) | Window가 동작 일부만 담아 walk_turn_walk 오분류 → [`ab_window_strategy.md`](reports/evidence/ab_window_strategy.md) |
+| 판단 불확실 | Confidence < 0.55 | Confidence **와 1·2등 차이** 두 기준, S02로 선택 | 새 사람의 정답도 0.26~0.33이라 0.55면 전부 불확실. 미학습 동작은 2등과 붙어 있음(차이 0.04~0.07) |
+| 모델 로드 | `joblib.load()` 바로 호출 | **SHA256 확인 후** 로드 | pickle은 임의 코드 실행 가능 — 우리가 검증한 그 파일인지 먼저 확인 |
+| 카메라 주소 | 자유 입력 | `ALLOWED_CAMERA_HOSTS`에 있는 host:port만 · 계정 정보 금지 | 서버가 임의 URL을 호출하는 SSRF 방지 |
+| 처리 시간 | 벽시계 차 | Worker 구간은 **단조 시계** | WSL2·Docker 시계 조정으로 전체 시간이 추론보다 짧게 나온 문제 → [`troubleshooting.md`](docs/troubleshooting.md) |
 
 ### 더 보기
 
@@ -147,4 +184,4 @@ Django는 작업을 DB에 저장하고 **커밋이 끝난 뒤** Celery에 등록
 | [`docs/troubleshooting.md`](docs/troubleshooting.md) | 문제 해결 7건 — 학습·추론 입력 불일치, Docker 빌드, 브라우저 재생, 처리 시간 측정 등 |
 | [`docs/api.md`](docs/api.md) | DRF · FastAPI API 계약과 오류 코드 |
 
-**알려진 한계**: 학습 데이터가 3명뿐이라 새 사람 · 새 환경에서는 신뢰도가 낮습니다(IP Webcam 0.26~0.30). YOLO는 화면 밖 관절도 추정하므로 전신이 나오는 가로 구도를 권장합니다. Docker 구성은 개발용(`runserver`, CPU 추론)입니다.
+**알려진 한계**: 모델이 S01 한 사람의 영상 6개로 학습되어 새 사람 · 새 환경에서는 1등 확률 자체가 낮습니다(IP Webcam 0.26~0.30). 판단 기준도 사람 1명당 6개 영상으로 고른 값이라 참고값이며, 데이터가 늘면 `evaluate_holdout.py`로 다시 고릅니다. YOLO는 화면 밖 관절도 추정하므로 전신이 나오는 가로 구도를 권장합니다. Docker 구성은 개발용(`runserver`, CPU 추론)입니다.

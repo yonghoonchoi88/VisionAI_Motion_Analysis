@@ -110,7 +110,7 @@
 | 장애 격리 | 추론 중 YOLO가 죽어도 DB에는 아무 일도 일어나지 않고, Worker가 `FAILURE`와 사유를 기록합니다. 오늘 torchvision 오류 때 실제로 fastapi만 멈추고 DB는 무사했습니다. |
 | 교체·확장 | FastAPI가 상태를 갖지 않으므로 GPU 서버로 옮기거나 여러 대로 늘려도 DB 설정을 건드릴 필요가 없습니다. |
 | 보안 | DB 비밀번호는 django·celery 컨테이너에만 있습니다. `compose.yaml`의 fastapi에는 DB 관련 환경변수가 없습니다. |
-| 테스트 | FastAPI는 DB 없이 가짜 Pose 모델로 24개 테스트를 돌릴 수 있습니다. |
+| 테스트 | FastAPI는 DB 없이 가짜 Pose 모델로 44개 테스트를 돌릴 수 있습니다. |
 
 ---
 
@@ -179,7 +179,9 @@
 0.26 ~ 0.32  새 사람·새 장소, ID가 쪼개진 조각   → 불확실 (1순위는 대부분 정답)
 0.23 ~ 0.25  학습하지 않은 동작 (SBU 악수)      → 불확실
 ```
-기준을 0.3으로 낮추면 **학습하지 않은 동작까지 '확신'으로 표시**하게 되므로 낮추지 않았습니다. 화면에는 Confidence와 함께 Class별 확률, 유효 Frame 비율(입력 품질)을 같이 보여 줍니다. → [`ab_capture_condition.md`](../reports/evidence/ab_capture_condition.md)
+기준을 0.3으로 낮추면 **학습하지 않은 동작까지 '확신'으로 표시**하게 되므로 낮추지 않았습니다.
+
+**개선 (11/24) — 기준을 2개로:** 위 분포를 다시 보면 새 사람의 정답(IP Webcam wave 0.30)은 2등과 **0.11** 벌어져 있고, 학습하지 않은 동작(SBU 악수)은 2등과 **0.04~0.07**밖에 차이가 나지 않습니다. 1등 확률 하나로는 둘을 못 나누지만 **1·2등 차이(margin)**를 함께 보면 나눌 수 있습니다. 그래서 `confidence < min_confidence 또는 margin < min_margin`이면 불확실로 바꾸고, 두 값은 S02(검증용 사람)와 SBU 영상만으로 고르며 S03은 결과 보고에만 씁니다 → `scripts/evaluate_holdout.py`, [`holdout_eval.md`](../reports/evidence/holdout/holdout_eval.md) 화면에는 Confidence와 함께 Class별 확률, 유효 Frame 비율(입력 품질)을 같이 보여 줍니다. → [`ab_capture_condition.md`](../reports/evidence/ab_capture_condition.md)
 
 ### Q13. 영상이 여러 번 들어온다면?
 

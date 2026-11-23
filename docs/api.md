@@ -47,7 +47,8 @@
   "inference_time_sec": 4.08,     "total_time_sec": 18.7,
   "predictions": [
     {"track_id": 1, "action_id": "A006", "action_label": "wave", "action_name_ko": "손 흔들기",
-     "confidence": 0.3, "is_uncertain": true, "window_count": 1, "window_mode": "whole_track",
+     "confidence": 0.3, "margin": 0.11, "runner_up_label": "leg_raise_lower", "runner_up_name_ko": "한쪽 다리를 들었다 내리기",
+     "is_uncertain": true, "window_count": 1, "window_mode": "whole_track",
      "valid_frame_ratio": 1.0, "duration_sec": 8.0, "probabilities": {"wave": 0.3, "...": 0.0}}
   ]
 }
@@ -58,6 +59,7 @@
 | `status` | `PENDING` → `STARTED` → `SUCCESS` / `FAILURE` (Celery 표준 표기) |
 | `stage` | `QUEUED`(대기) → `CAPTURING`(영상 수집, IP Webcam만) → `INFERRING`(AI 분석) → `DONE`(완료) |
 | `total_time_sec` | 대기(생성→시작) + Worker 처리 시간(단조 시계) |
+| `margin` · `runner_up_label` | 1등 − 2등 확률과 2등 동작. 판단 불확실 기준 ② (예전 기록은 `null`) |
 
 ---
 
@@ -67,7 +69,9 @@
 
 ```json
 {"status": "ok", "model_ready": true, "error": null, "device": "cpu", "window_strategy": "auto",
- "model": {"model_type": "RandomForestClassifier", "n_features": 1140, "sequence_steps": 30, "classes": ["..."]}}
+ "decision_rule": {"min_confidence": 0.55, "min_margin": 0.0},
+ "model": {"model_type": "RandomForestClassifier", "n_features": 1140, "sequence_steps": 30,
+           "checksum_verified": true, "classes": ["..."]}}
 ```
 
 모델 로드에 실패해도 서버는 뜨고 `status: degraded`, `model_ready: false`, `error`에 원인을 담습니다. Docker healthcheck가 `model_ready`를 확인합니다.
@@ -83,7 +87,7 @@
   "person_count": 1,
   "predictions": [
     {"track_id": 1, "action_id": "A003", "action_label": "walk_turn_walk", "confidence": 0.66,
-     "is_uncertain": false, "probabilities": {"walk_turn_walk": 0.66, "...": 0.0},
+     "margin": 0.57, "runner_up_label": "wave", "is_uncertain": false, "probabilities": {"walk_turn_walk": 0.66, "...": 0.0},
      "window_count": 1, "window_mode": "whole_track",
      "seen_frames": 265, "valid_frames": 265, "valid_frame_ratio": 1.0, "duration_sec": 10.6}
   ],
@@ -91,6 +95,7 @@
   "video": {"filename": "walk_turn_walk.mp4", "fps": 25.0, "fps_assumed": false, "frame_count": 265,
             "processed_frames": 265, "duration_sec": 10.6, "width": "…", "height": "…"},
   "uncertain_threshold": 0.55,
+  "decision_rule": {"min_confidence": 0.55, "min_margin": 0.0},
   "processing_time_sec": 7.2
 }
 ```
