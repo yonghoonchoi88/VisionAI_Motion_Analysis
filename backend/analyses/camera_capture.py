@@ -7,6 +7,8 @@ Celery Worker가 호출한다. 허용된 카메라에 연결해 정해진 시간
     capture_clip(url, seconds, out_path) → CaptureResult
 
 - '8초'는 입력 영상의 길이. 연결·AI 추론 시간은 별도.
+- 저장 형식은 WebM(VP8): 브라우저 상세 화면에서 바로 재생됨. (OpenCV의 mp4v는 Chrome이 재생 못 함)
+  VP8 인코더를 쓸 수 없는 환경이면 mp4v(.mp4)로 대체 저장하고 실제 경로를 반환한다.
 - FPS는 실제로 받은 Frame 수 / 실제 경과 시간으로 계산해 저장 → 영상 속 시간이 실제와 같아진다.
 - 연결 실패·도중 끊김·Frame 부족은 CameraCaptureError (사용자에게 그대로 보여 줄 메시지).
 """
@@ -27,7 +29,8 @@ OPEN_TIMEOUT_MS = 5000          # 카메라 연결 대기 한도
 READ_TIMEOUT_MS = 5000          # Frame 1장 대기 한도
 MAX_CONSECUTIVE_FAILS = 30      # 연속 읽기 실패 허용 횟수 (넘으면 연결 끊김으로 판단)
 MIN_FRAMES = 15                 # 이보다 적게 받으면 분석 불가
-MAX_WIDTH = 960                 # 큰 해상도는 줄여서 저장 (YOLO 입력은 640)
+MAX_WIDTH = 640                 # YOLO 입력이 640이므로 더 크게 저장해도 정확도 이득 없음 (인코딩·전송만 느려짐)
+TARGET_FPS = 30.0               # 스트림이 버퍼를 몰아서 보내도(예: 55fps) 30fps 간격으로만 저장 → 일정한 시간축
 
 
 class CameraCaptureError(RuntimeError):
@@ -60,6 +63,7 @@ def capture_clip(source: str, seconds: float, out_path: Path | str) -> CaptureRe
     encoded: list[bytes] = []
     size: tuple[int, int] | None = None
     fails = 0
+    last_kept = -1.0
     try:
         start = time.monotonic()
         while (elapsed := time.monotonic() - start) < seconds:
@@ -71,6 +75,10 @@ def capture_clip(source: str, seconds: float, out_path: Path | str) -> CaptureRe
                 time.sleep(0.02)
                 continue
             fails = 0
+            now = time.monotonic()
+            if now - last_kept < 1.0 / TARGET_FPS:        # 너무 촘촘하게 들어온 Frame은 건너뜀
+                continue
+            last_kept = now
             frame = _limit_width(frame)
             size = size or (frame.shape[1], frame.shape[0])
             if (frame.shape[1], frame.shape[0]) != size:
@@ -85,14 +93,9 @@ def capture_clip(source: str, seconds: float, out_path: Path | str) -> CaptureRe
     if len(encoded) < MIN_FRAMES or size is None:
         raise CameraCaptureError(f"받은 Frame이 너무 적습니다 ({len(encoded)}장). 카메라 상태를 확인하세요.")
 
-    # MPEG-4는 timebase 분모가 65535 이하여야 한다 → 측정 FPS(예: 14.837…)를 소수 2자리로 반올림
+    # 측정 FPS(예: 17.637…)를 소수 2자리로 반올림 (MPEG-4 timebase 분모 제한 대비)
     fps = max(1.0, round(len(encoded) / actual, 2))
-    writer = cv2.VideoWriter(str(out_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, size)
-    if not writer.isOpened():                      # 그래도 실패하면 정수 FPS로 재시도
-        fps = float(max(1, round(fps)))
-        writer = cv2.VideoWriter(str(out_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, size)
-    if not writer.isOpened():
-        raise CameraCaptureError("수집한 영상을 저장하지 못했습니다.")
+    writer, out_path = _open_writer(out_path, fps, size)
     try:
         for data in encoded:
             writer.write(cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR))
@@ -101,6 +104,21 @@ def capture_clip(source: str, seconds: float, out_path: Path | str) -> CaptureRe
 
     logger.info("captured %d frames in %.2fs (%.1f fps) → %s", len(encoded), actual, fps, out_path)
     return CaptureResult(out_path, len(encoded), round(actual, 2), round(fps, 2), size[0], size[1])
+
+
+def _open_writer(out_path: Path, fps: float, size: tuple[int, int]) -> tuple[cv2.VideoWriter, Path]:
+    """WebM(VP8) → 실패 시 MP4(mp4v, 정수 FPS) 순서로 시도한다."""
+    candidates = [
+        (out_path.with_suffix(".webm"), "VP80", fps),
+        (out_path.with_suffix(".mp4"), "mp4v", fps),
+        (out_path.with_suffix(".mp4"), "mp4v", float(max(1, round(fps)))),
+    ]
+    for path, fourcc, f in candidates:
+        writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*fourcc), f, size)
+        if writer.isOpened():
+            return writer, path
+        writer.release()
+    raise CameraCaptureError("수집한 영상을 저장하지 못했습니다.")
 
 
 def _limit_width(frame: np.ndarray) -> np.ndarray:

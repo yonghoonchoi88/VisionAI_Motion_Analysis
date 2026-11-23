@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from unittest import mock
 
@@ -128,6 +129,7 @@ class AnalysisApiTests(TestCase):
         def fake_capture(url, seconds, out):
             Path(out).parent.mkdir(parents=True, exist_ok=True)
             Path(out).write_bytes(b"fake")
+            return mock.Mock(path=Path(out))
         with mock.patch("analyses.tasks.capture_clip", side_effect=fake_capture) as cap, \
              mock.patch("analyses.tasks.predict_video", return_value=fake_result(1)):
             with self.captureOnCommitCallbacks(execute=True):
@@ -138,6 +140,7 @@ class AnalysisApiTests(TestCase):
         job = AnalysisJob.objects.get(pk=r.json()["id"])
         self.assertEqual((job.status, job.predictions.count()), ("SUCCESS", 1))
         self.assertTrue(job.video_file.name.startswith("captures/"))
+        self.assertTrue(job.video_file.name.endswith(".webm"))
 
     def test_camera_disconnect_marks_failure(self):
         with mock.patch("analyses.tasks.capture_clip", side_effect=CameraCaptureError("수집 중 카메라 연결이 끊겼습니다")):
@@ -212,28 +215,59 @@ class AnalysisApiTests(TestCase):
         self.assertContains(self.client.get(reverse("analyses:detail", args=[job_id])), "Track 1")
 
 
-class CameraCaptureTests(TestCase):
-    """IP Webcam 대신 로컬 영상 파일을 '스트림'처럼 읽어 수집 로직을 검증한다."""
+class FakeStream:
+    """IP Webcam 대역: 실제 카메라처럼 '실시간 속도'로 Frame을 내보낸다 (fps·해상도·끊김 시점 조절)."""
 
+    def __init__(self, fps=60, size=(1280, 720), fail_after=None, opened=True):
+        self.interval, self.size, self.fail_after, self.opened, self.n = 1 / fps, size, fail_after, opened, 0
+
+    def __call__(self, *args, **kwargs):          # cv2.VideoCapture(...) 호출을 흉내
+        return self
+
+    def isOpened(self):
+        return self.opened
+
+    def read(self):
+        time.sleep(self.interval)
+        self.n += 1
+        if self.fail_after is not None and self.n > self.fail_after:
+            return False, None
+        return True, np.full((self.size[1], self.size[0], 3), self.n % 255, np.uint8)
+
+    def release(self):
+        pass
+
+
+class CameraCaptureTests(TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
-        self.src = self.tmp / "stream.mp4"
-        w = cv2.VideoWriter(str(self.src), cv2.VideoWriter_fourcc(*"mp4v"), 30, (320, 240))
-        for i in range(300):
-            w.write(np.full((240, 320, 3), i % 255, np.uint8))
-        w.release()
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_capture_writes_clip(self):
-        res = capture_clip(str(self.src), seconds=0.5, out_path=self.tmp / "out" / "clip.mp4")
+    def capture(self, stream, seconds=1.0):
+        with mock.patch("analyses.camera_capture.cv2.VideoCapture", stream):
+            return capture_clip("http://192.168.0.10:8080/video", seconds, self.tmp / "clip.webm")
+
+    def test_capture_limits_fps_and_size(self):
+        """60fps·1280x720 스트림 → 약 30fps·640px로 저장, 브라우저 재생용 WebM."""
+        res = self.capture(FakeStream(fps=60))
         self.assertTrue(res.path.is_file())
-        self.assertGreaterEqual(res.frames, 15)
+        self.assertEqual(res.path.suffix, ".webm")
+        self.assertLessEqual(res.fps, 31)
+        self.assertGreaterEqual(res.frames, 20)
+        self.assertEqual((res.width, res.height), (640, 360))
         cap = cv2.VideoCapture(str(res.path))
-        self.assertGreater(cap.get(cv2.CAP_PROP_FRAME_COUNT), 0)
+        n = 0
+        while cap.read()[0]:
+            n += 1
         cap.release()
+        self.assertEqual(n, res.frames)             # 저장한 Frame이 모두 다시 읽힘
 
     def test_unreachable_camera_raises(self):
-        with self.assertRaises(CameraCaptureError):
-            capture_clip(str(self.tmp / "nope.mp4"), seconds=0.5, out_path=self.tmp / "x.mp4")
+        with self.assertRaisesRegex(CameraCaptureError, "연결할 수 없습니다"):
+            self.capture(FakeStream(opened=False))
+
+    def test_disconnect_mid_capture_raises(self):
+        with self.assertRaisesRegex(CameraCaptureError, "끊겼습니다"):
+            self.capture(FakeStream(fps=100, fail_after=5), seconds=2.0)

@@ -12,6 +12,7 @@ run_analysis(job_id)
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from celery import shared_task
 from django.conf import settings
@@ -85,12 +86,11 @@ def _acquire_video(job: AnalysisJob):
 
     # IP Webcam: 수집한 구간을 MEDIA에 저장하고 Job에 연결 (나중에 다시 확인 가능)
     _update(job, stage=AnalysisJob.Stage.CAPTURING)
-    rel_path = f"captures/{timezone.localdate():%Y/%m/%d}/job_{job.pk}.mp4"
-    out_path = settings.MEDIA_ROOT / rel_path
-    capture_clip(job.camera_url, job.capture_seconds or settings.CAMERA_CAPTURE_SECONDS_DEFAULT, out_path)
-    job.video_file.name = rel_path
+    out_path = Path(settings.MEDIA_ROOT) / f"captures/{timezone.localdate():%Y/%m/%d}/job_{job.pk}.webm"
+    result = capture_clip(job.camera_url, job.capture_seconds or settings.CAMERA_CAPTURE_SECONDS_DEFAULT, out_path)
+    job.video_file.name = result.path.relative_to(settings.MEDIA_ROOT).as_posix()   # 실제 저장 형식(.webm/.mp4) 반영
     job.save(update_fields=["video_file"])
-    return out_path
+    return result.path
 
 
 def _to_prediction(job: AnalysisJob, p: dict) -> PersonPrediction:
