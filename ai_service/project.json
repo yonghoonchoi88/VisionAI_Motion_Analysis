@@ -14,8 +14,11 @@
     "min_window_fill_ratio": 0.8,
     "min_valid_feature_ratio": 0.6,
     "min_valid_features": 10,
-    "prediction_interval_sec": 0.25,
-    "confidence_threshold": 0.55
+    "prediction_interval_sec": 0.25
+  },
+  "decision": {
+    "min_confidence": 0.55,
+    "min_margin": 0.0
   },
   "tracking": {
     "tracker": "bytetrack.yaml",
@@ -24,5 +27,6 @@
   "limits": {
     "max_video_seconds": 60
   },
-  "_comment_strategy": "strategy: sliding(7일차 5초 Window) | whole_track(6일차 학습처럼 사람별 전체 구간 1개) | auto(사람이 보인 시간이 whole_track_max_seconds 이하면 whole_track, 아니면 sliding). 환경변수 WINDOW_STRATEGY로 덮어쓰기 가능."
+  "_comment_strategy": "strategy: sliding(7일차 5초 Window) | whole_track(6일차 학습처럼 사람별 전체 구간 1개) | auto(사람이 보인 시간이 whole_track_max_seconds 이하면 whole_track, 아니면 sliding) | hybrid(전체 구간 확률과 sliding Window 평균 확률을 반씩 섞음). 환경변수 WINDOW_STRATEGY로 덮어쓰기 가능.",
+  "_comment_decision": "판단 불확실 = confidence < min_confidence 또는 (1등-2등 확률 차) < min_margin. 기본값은 기존 동작(0.55, 0.0)과 같다. scripts/evaluate_holdout.py가 S02(검증용 사람)로 고른 값을 출력하면 그 값으로 바꾼다. 환경변수 MIN_CONFIDENCE·MIN_MARGIN으로 덮어쓰기 가능."
 }

@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 AI_ROOT = Path(__file__).resolve().parent.parent          # ai_service/
 CONFIG_PATH = AI_ROOT / "project.json"
 DEFAULT_FPS = 30.0                                        # 영상에 FPS 정보가 없을 때 가정값
-VALID_STRATEGIES = ("sliding", "whole_track", "auto")
+VALID_STRATEGIES = ("sliding", "whole_track", "auto", "hybrid")
 
 
 class VideoReadError(ValueError):
@@ -74,12 +74,16 @@ class PipelineConfig:
     min_valid_feature_ratio: float
     min_valid_features: int
     prediction_interval_sec: float
-    confidence_threshold: float
+    min_confidence: float          # 판단 불확실 기준 ①: 1등 확률이 이보다 낮으면 불확실
+    min_margin: float              # 판단 불확실 기준 ②: 1등-2등 확률 차가 이보다 작으면 불확실
     max_video_seconds: float
 
     @classmethod
     def load(cls, path: Path | str = CONFIG_PATH) -> "PipelineConfig":
-        """project.json을 읽는다. 환경변수 POSE_DEVICE가 있으면 device를 덮어쓴다 (예: Docker에서 cpu)."""
+        """project.json을 읽는다.
+
+        환경변수로 덮어쓰기: POSE_DEVICE(예: Docker에서 cpu) · WINDOW_STRATEGY · MIN_CONFIDENCE · MIN_MARGIN
+        """
         path = Path(path)
         with path.open(encoding="utf-8") as f:
             raw = json.load(f)
@@ -88,6 +92,13 @@ class PipelineConfig:
         strategy = os.getenv("WINDOW_STRATEGY", str(win.get("strategy", "sliding")))
         if strategy not in VALID_STRATEGIES:
             raise ValueError(f"window.strategy는 {VALID_STRATEGIES} 중 하나여야 합니다: {strategy}")
+
+        # 판단 기준: decision 블록이 없으면 예전 설정(window.confidence_threshold, margin 0)으로 동작
+        decision = raw.get("decision", {})
+        min_confidence = float(os.getenv("MIN_CONFIDENCE", decision.get("min_confidence", win.get("confidence_threshold", 0.55))))
+        min_margin = float(os.getenv("MIN_MARGIN", decision.get("min_margin", 0.0)))
+        if not (0.0 <= min_confidence <= 1.0 and 0.0 <= min_margin <= 1.0):
+            raise ValueError(f"판단 기준은 0~1 사이여야 합니다: min_confidence={min_confidence}, min_margin={min_margin}")
 
         model_path = Path(pose["model"])
         if not model_path.is_absolute():
@@ -107,7 +118,8 @@ class PipelineConfig:
             min_valid_feature_ratio=float(win["min_valid_feature_ratio"]),
             min_valid_features=int(win["min_valid_features"]),
             prediction_interval_sec=float(win["prediction_interval_sec"]),
-            confidence_threshold=float(win["confidence_threshold"]),
+            min_confidence=min_confidence,
+            min_margin=min_margin,
             max_video_seconds=float(os.getenv("MAX_VIDEO_SECONDS", lim["max_video_seconds"])),
         )
 
@@ -138,8 +150,8 @@ class VideoInfo:
 @dataclass(frozen=True)
 class TrackSequences:
     track_id: int
-    windows: np.ndarray        # (n_windows, 1140)
-    window_mode: str           # "sliding" | "whole_track"
+    windows: np.ndarray        # (n_windows, 1140). hybrid면 0번 행 = 전체 구간, 1번~ = sliding Window
+    window_mode: str           # "sliding" | "whole_track" | "hybrid"
     seen_frames: int           # 이 사람이 검출된 Frame 수
     valid_frames: int          # 그중 38-D Feature 계산에 성공한 Frame 수
     first_sec: float
@@ -236,7 +248,20 @@ class PosePipeline:
 
     def run(self, video_path: Path | str) -> PipelineOutput:
         with self._lock:
-            return self._run(Path(video_path))
+            video, logs = self._collect(Path(video_path))
+        return self._finalize(video, logs, self.config.window_strategy)
+
+    def run_strategies(self, video_path: Path | str, strategies: list[str] | tuple[str, ...]) -> dict[str, PipelineOutput]:
+        """YOLO는 영상당 1번만 돌리고, 같은 Pose 기록으로 여러 Window 전략의 결과를 만든다.
+
+        전략 A/B 비교(scripts/evaluate_holdout.py)에서 같은 입력으로 공정하게 비교하기 위해 사용한다.
+        """
+        unknown = [s for s in strategies if s not in VALID_STRATEGIES]
+        if unknown:
+            raise ValueError(f"알 수 없는 전략: {unknown} (가능: {VALID_STRATEGIES})")
+        with self._lock:
+            video, logs = self._collect(Path(video_path))
+        return {s: self._finalize(video, logs, s) for s in strategies}
 
     # ── 내부 구현 ───────────────────────────────────────────
     def _track(self, frame: np.ndarray):
@@ -256,7 +281,8 @@ class PosePipeline:
         for tracker in getattr(predictor, "trackers", None) or []:
             tracker.reset()
 
-    def _run(self, video_path: Path) -> PipelineOutput:
+    def _collect(self, video_path: Path) -> tuple[VideoInfo, dict[int, "_TrackLog"]]:
+        """영상 전체 Frame에 YOLO Pose·ByteTrack을 돌려 사람별 기록(_TrackLog)을 모은다."""
         cfg = self.config
         cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
@@ -311,7 +337,7 @@ class PosePipeline:
             width=width,
             height=height,
         )
-        return self._finalize(video, logs)
+        return video, logs
 
     def _process_frame(
         self,
@@ -364,17 +390,16 @@ class PosePipeline:
         sequence = resample_sequence(matrix, times, target_steps=self.sequence_steps)
         return flatten_sequence(sequence)
 
-    def _choose_mode(self, log: _TrackLog) -> str:
-        """설정된 전략에 따라 이 사람의 Window 방식을 고른다. sliding Window가 없으면 항상 whole_track."""
-        strategy = self.config.window_strategy
+    def _choose_mode(self, log: _TrackLog, strategy: str) -> str:
+        """전략에 따라 이 사람의 Window 방식을 고른다. sliding Window가 없으면 항상 whole_track."""
         if strategy == "auto":
             visible = log.last_sec - log.first_sec
             strategy = "whole_track" if visible <= self.config.whole_track_max_seconds else "sliding"
-        if strategy == "sliding" and log.windows:
-            return "sliding"
+        if strategy in ("sliding", "hybrid") and log.windows:
+            return strategy
         return "whole_track"
 
-    def _finalize(self, video: VideoInfo, logs: dict[int, _TrackLog]) -> PipelineOutput:
+    def _finalize(self, video: VideoInfo, logs: dict[int, _TrackLog], strategy: str) -> PipelineOutput:
         tracks: list[TrackSequences] = []
         skipped: list[SkippedTrack] = []
 
@@ -393,13 +418,16 @@ class PosePipeline:
                 )
                 continue
 
-            mode = self._choose_mode(log)
+            mode = self._choose_mode(log, strategy)
             if mode == "sliding":
                 windows = np.stack(log.windows)
             else:
+                # 6일차 학습과 같은 입력: 이 사람이 보인 구간 전체를 30 Step으로 리샘플
                 matrix = np.stack(log.valid_features).astype(np.float32)
                 times = np.asarray(log.valid_times, dtype=np.float32)
-                windows = self._to_window(matrix, times)[np.newaxis, :]
+                whole = self._to_window(matrix, times)[np.newaxis, :]
+                # hybrid: [전체 구간, sliding Window...] → action_inference가 반반 가중 평균
+                windows = np.vstack([whole, np.stack(log.windows)]) if mode == "hybrid" else whole
 
             tracks.append(
                 TrackSequences(

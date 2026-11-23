@@ -27,7 +27,7 @@ from typing import Literal
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel, Field
 
-from services.action_inference import predict_tracks
+from services.action_inference import DecisionRule, predict_tracks
 from services.pose_pipeline import VideoReadError
 
 logger = logging.getLogger(__name__)
@@ -46,10 +46,12 @@ class PersonResult(BaseModel):
     action_id: str = Field(examples=["A006"])
     action_label: str = Field(examples=["wave"])
     confidence: float = Field(ge=0, le=1)
-    is_uncertain: bool = Field(description="confidence < uncertain_threshold 이면 True → 화면에 '판단 불확실'")
+    margin: float = Field(ge=0, le=1, description="1등 확률 - 2등 확률. 작을수록 두 동작 사이에서 헷갈린 것")
+    runner_up_label: str = Field(examples=["drink_return"], description="2등 동작")
+    is_uncertain: bool = Field(description="confidence < min_confidence 또는 margin < min_margin 이면 True → 화면에 '판단 불확실'")
     probabilities: dict[str, float]
     window_count: int
-    window_mode: Literal["sliding", "whole_track"]
+    window_mode: Literal["sliding", "whole_track", "hybrid"]
     seen_frames: int
     valid_frames: int
     valid_frame_ratio: float = Field(description="입력 품질 지표: 검출 Frame 중 Feature 계산 성공 비율")
@@ -74,6 +76,11 @@ class VideoMeta(BaseModel):
     height: int
 
 
+class DecisionRuleResult(BaseModel):
+    min_confidence: float
+    min_margin: float
+
+
 class PredictVideoResponse(BaseModel):
     status: Literal["OK", "NO_PERSON", "NO_VALID_TRACK"]
     message: str
@@ -81,7 +88,8 @@ class PredictVideoResponse(BaseModel):
     predictions: list[PersonResult]
     skipped_tracks: list[SkippedTrackResult]
     video: VideoMeta
-    uncertain_threshold: float
+    uncertain_threshold: float = Field(description="하위 호환용 = decision_rule.min_confidence")
+    decision_rule: DecisionRuleResult
     processing_time_sec: float
 
 
@@ -91,6 +99,7 @@ class HealthResponse(BaseModel):
     error: str | None = None
     device: str | None = None
     window_strategy: str | None = None
+    decision_rule: DecisionRuleResult | None = None
     model: dict | None = None
 
 
@@ -124,6 +133,7 @@ def health(request: Request) -> HealthResponse:
         error=getattr(state, "load_error", None),
         device=str(state.pipeline.device) if ready else None,
         window_strategy=state.pipeline.config.window_strategy if ready else None,
+        decision_rule=DecisionRuleResult(**_decision_rule(state.pipeline).to_dict()) if ready else None,
         model=state.bundle.summary() if ready else None,
     )
 
@@ -154,8 +164,13 @@ def predict_video(request: Request, file: UploadFile = File(..., description="�
         except VideoReadError as e:
             raise _error(422, e.code, str(e)) from e
 
-        threshold = pipeline.config.confidence_threshold
-        preds = predict_tracks(bundle, {t.track_id: t.windows for t in output.tracks}, threshold)
+        rule = _decision_rule(pipeline)
+        preds = predict_tracks(
+            bundle,
+            {t.track_id: t.windows for t in output.tracks},
+            rule,
+            modes_by_track={t.track_id: t.window_mode for t in output.tracks},
+        )
         track_by_id = {t.track_id: t for t in output.tracks}
 
         predictions = [
@@ -185,7 +200,8 @@ def predict_video(request: Request, file: UploadFile = File(..., description="�
             predictions=predictions,
             skipped_tracks=[SkippedTrackResult(**asdict(s)) for s in output.skipped_tracks],
             video=VideoMeta(filename=filename, **asdict(v)),
-            uncertain_threshold=threshold,
+            uncertain_threshold=rule.min_confidence,
+            decision_rule=DecisionRuleResult(**rule.to_dict()),
             processing_time_sec=round(time.perf_counter() - started, 3),
         )
     except HTTPException:
@@ -195,6 +211,11 @@ def predict_video(request: Request, file: UploadFile = File(..., description="�
         raise _error(500, "INFERENCE_ERROR", f"추론 중 오류가 발생했습니다: {type(e).__name__}") from e
     finally:
         tmp_path.unlink(missing_ok=True)
+
+
+def _decision_rule(pipeline) -> DecisionRule:
+    cfg = pipeline.config
+    return DecisionRule(min_confidence=cfg.min_confidence, min_margin=cfg.min_margin)
 
 
 def _save_upload(file: UploadFile, suffix: str) -> Path:

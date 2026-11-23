@@ -81,3 +81,15 @@ def test_predict_empty_file(client_factory, tmp_path):
     with client_factory() as c:
         r = _post(c, f)
     assert r.status_code == 400 and r.json()["detail"]["code"] == "EMPTY_FILE"
+
+
+def test_predict_reports_margin_and_rule(client_factory, make_video):
+    """응답에 1·2등 차이(margin)·2등 동작·적용한 판단 기준이 포함된다 (Worker가 DB에 저장)."""
+    with client_factory() as c:
+        body = _post(c, make_video(seconds=2)).json()
+        health = c.get("/health").json()
+    p = body["predictions"][0]
+    assert 0 <= p["margin"] <= p["confidence"]
+    assert p["runner_up_label"] in p["probabilities"] and p["runner_up_label"] != p["action_label"]
+    assert set(body["decision_rule"]) == {"min_confidence", "min_margin"}
+    assert health["decision_rule"] == body["decision_rule"]
