@@ -115,3 +115,13 @@ def test_decision_out_of_range_rejected(monkeypatch):
     monkeypatch.setenv("MIN_MARGIN", "1.5")
     with pytest.raises(ValueError):
         PipelineConfig.load(AI_ROOT / "project.json")
+
+
+def test_empty_env_falls_back_to_project_json(monkeypatch):
+    """compose에서 MIN_CONFIDENCE=(빈 값)으로 넘겨도 project.json 값을 쓴다."""
+    from tests.conftest import AI_ROOT
+
+    monkeypatch.setenv("MIN_CONFIDENCE", "")
+    monkeypatch.setenv("MIN_MARGIN", "")
+    cfg = PipelineConfig.load(AI_ROOT / "project.json")
+    assert 0 <= cfg.min_confidence <= 1 and 0 <= cfg.min_margin <= 1

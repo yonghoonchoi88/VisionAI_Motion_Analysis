@@ -95,8 +95,9 @@ class PipelineConfig:
 
         # 판단 기준: decision 블록이 없으면 예전 설정(window.confidence_threshold, margin 0)으로 동작
         decision = raw.get("decision", {})
-        min_confidence = float(os.getenv("MIN_CONFIDENCE", decision.get("min_confidence", win.get("confidence_threshold", 0.55))))
-        min_margin = float(os.getenv("MIN_MARGIN", decision.get("min_margin", 0.0)))
+        # 빈 문자열(compose에서 값을 비워 둔 경우)은 '설정 없음'으로 본다
+        min_confidence = float(os.getenv("MIN_CONFIDENCE") or decision.get("min_confidence", win.get("confidence_threshold", 0.55)))
+        min_margin = float(os.getenv("MIN_MARGIN") or decision.get("min_margin", 0.0))
         if not (0.0 <= min_confidence <= 1.0 and 0.0 <= min_margin <= 1.0):
             raise ValueError(f"판단 기준은 0~1 사이여야 합니다: min_confidence={min_confidence}, min_margin={min_margin}")
 

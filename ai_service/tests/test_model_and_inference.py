@@ -15,6 +15,7 @@ from services.model_loader import (
     MODELS_DIR,
     ModelSpecError,
     load_model_bundle,
+    write_checksums,
 )
 
 
@@ -65,3 +66,42 @@ def test_predict_tracks_rejects_bad_input(synthetic_bundle):
     with pytest.raises(ValueError, match="NaN"):
         predict_tracks(synthetic_bundle, {1: np.full((1, 1140), np.nan)})
     assert predict_tracks(synthetic_bundle, {}) == []
+
+
+# ─────────────────────────────────────────────────────────────
+# 모델 파일 무결성 (joblib.load 전에 SHA256 확인)
+# ─────────────────────────────────────────────────────────────
+@pytest.fixture
+def models_copy(tmp_path, synthetic_models_dir):
+    for f in synthetic_models_dir.iterdir():
+        shutil.copy(f, tmp_path)
+    return tmp_path
+
+
+def test_checksum_missing_is_warning_only(models_copy):
+    assert load_model_bundle(models_copy).checksum_verified is False
+
+
+def test_checksum_missing_rejected_when_required(models_copy, monkeypatch):
+    monkeypatch.setenv("REQUIRE_MODEL_CHECKSUM", "1")
+    with pytest.raises(ModelSpecError, match="SHA256SUMS"):
+        load_model_bundle(models_copy)
+
+
+def test_checksum_verified(models_copy):
+    write_checksums(models_copy)
+    bundle = load_model_bundle(models_copy)
+    assert bundle.checksum_verified is True
+    assert bundle.summary()["checksum_verified"] is True
+
+
+def test_tampered_joblib_is_not_loaded(models_copy, monkeypatch):
+    """해시가 다르면 joblib.load(=pickle 실행) 자체를 하지 않는다."""
+    write_checksums(models_copy)
+    with (models_copy / MODEL_FILE).open("ab") as f:
+        f.write(b"tampered")
+    called = []
+    monkeypatch.setattr("services.model_loader.joblib.load", lambda *a, **k: called.append(a))
+    with pytest.raises(ModelSpecError, match="해시 불일치"):
+        load_model_bundle(models_copy)
+    assert called == []

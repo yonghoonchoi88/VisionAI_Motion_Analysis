@@ -54,6 +54,9 @@ services:
       POSE_DEVICE: ${POSE_DEVICE:-cpu}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-200}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REQUIRE_MODEL_CHECKSUM: ${REQUIRE_MODEL_CHECKSUM:-0}   # 1이면 SHA256SUMS.txt 없이는 모델을 열지 않음
+      MIN_CONFIDENCE: ${MIN_CONFIDENCE:-}                    # 비우면 project.json의 decision 값 사용
+      MIN_MARGIN: ${MIN_MARGIN:-}
     volumes:
       - ./ai_service/models:/app/models:ro           # joblib·pt는 Git에 없으므로 로컬 파일을 읽기 전용으로 연결
     ports:

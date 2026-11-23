@@ -13,12 +13,17 @@
 보안 메모
     joblib.load()는 내부적으로 pickle을 사용하므로 임의 코드가 실행될 수 있다.
     반드시 본인이 학습한 신뢰 가능한 파일에만 사용한다. (사용자 업로드 파일에 절대 사용 금지)
+    → models/SHA256SUMS.txt가 있으면 joblib.load() '전에' 해시를 비교해, 바뀐 파일은 열지 않는다.
+      목록 만들기:  python -m services.model_loader --write-checksums     (ai_service/ 폴더에서)
+      목록이 없으면 경고만 남기고, REQUIRE_MODEL_CHECKSUM=1이면 시작을 거부한다.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import os
 import sys
 import warnings
 from dataclasses import dataclass, field
@@ -40,6 +45,8 @@ MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
 MODEL_FILE = "rf_action_baseline.joblib"
 FEATURE_COLUMNS_FILE = "rf_feature_columns.json"
 TRAINING_INFO_FILE = "rf_training_info.json"
+CHECKSUM_FILE = "SHA256SUMS.txt"           # `sha256sum` 형식: "<hex>  <파일명>"
+POSE_WEIGHTS_FILE = "yolo11n-pose.pt"      # 해시 목록에 함께 기록 (있을 때만)
 
 FEATURES_PER_STEP = 38      # COCO 17 Keypoint × (x, y) = 34 + 관절 각도 4개(팔꿈치·무릎 좌우)
 EXPECTED_NUM_CLASSES = 6
@@ -76,6 +83,7 @@ class ModelBundle:
     min_valid_frames: int               # 10 — 이보다 짧게 검출된 사람은 판단하지 않음
     expects_dataframe: bool             # 학습 시 DataFrame을 썼다면 True (feature_names_in_ 존재)
     training_info: dict[str, Any] = field(repr=False, hash=False, compare=False)
+    checksum_verified: bool = False     # SHA256SUMS.txt로 무결성 확인을 마쳤는지
 
     @property
     def n_features(self) -> int:
@@ -94,6 +102,7 @@ class ModelBundle:
             "sequence_steps": self.sequence_steps,
             "features_per_step": self.features_per_step,
             "min_valid_frames": self.min_valid_frames,
+            "checksum_verified": self.checksum_verified,
             "classes": [{"label": c, "action_id": ACTION_IDS[c]} for c in self.classes],
         }
 
@@ -107,6 +116,61 @@ def _read_json(path: Path) -> Any:
             return json.load(f)
     except json.JSONDecodeError as e:
         raise ModelSpecError(f"JSON 형식 오류: {path.name} ({e})") from e
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def verify_checksums(models_dir: Path) -> bool:
+    """SHA256SUMS.txt에 적힌 파일의 해시를 확인한다.
+
+    반환: True(확인 완료) / False(목록 파일 없음 — 경고만)
+    예외: 해시 불일치·목록에 joblib 없음·목록의 파일 없음 → ModelSpecError (joblib.load 전에 중단)
+    """
+    sums_path = models_dir / CHECKSUM_FILE
+    if not sums_path.is_file():
+        if os.getenv("REQUIRE_MODEL_CHECKSUM", "0") == "1":
+            raise ModelSpecError(f"{CHECKSUM_FILE}가 없습니다 (REQUIRE_MODEL_CHECKSUM=1). 먼저 목록을 만드세요.")
+        logger.warning("%s 없음 — 모델 파일 무결성을 확인하지 않고 로드합니다.", CHECKSUM_FILE)
+        return False
+
+    expected: dict[str, str] = {}
+    for line in sums_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        digest, _, name = line.strip().partition(" ")
+        expected[name.strip().lstrip("*")] = digest.lower()
+
+    if MODEL_FILE not in expected:
+        raise ModelSpecError(f"{CHECKSUM_FILE}에 {MODEL_FILE}가 없습니다 — joblib은 반드시 해시를 확인해야 합니다.")
+
+    errors = []
+    for name, digest in expected.items():
+        path = models_dir / name
+        if not path.is_file():
+            errors.append(f"{name}: 파일 없음")
+        elif _sha256(path) != digest:
+            errors.append(f"{name}: 해시 불일치 (파일이 바뀌었거나 다른 실행의 산출물)")
+    if errors:
+        raise ModelSpecError("모델 파일 무결성 검사 실패 — joblib.load()를 하지 않습니다:\n  - " + "\n  - ".join(errors))
+    return True
+
+
+def write_checksums(models_dir: Path = MODELS_DIR) -> Path:
+    """현재 모델 파일들의 SHA256 목록을 만든다. (검증을 마친 '신뢰하는 세트'에서 1번만 실행)"""
+    names = [n for n in (MODEL_FILE, FEATURE_COLUMNS_FILE, TRAINING_INFO_FILE, POSE_WEIGHTS_FILE)
+             if (models_dir / n).is_file()]
+    if MODEL_FILE not in names:
+        raise ModelSpecError(f"{MODEL_FILE}가 없어 목록을 만들 수 없습니다.")
+    lines = [f"{_sha256(models_dir / n)}  {n}" for n in names]
+    out = models_dir / CHECKSUM_FILE
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return out
 
 
 def _load_model(path: Path) -> Any:
@@ -223,6 +287,7 @@ def load_model_bundle(models_dir: Path | str = MODELS_DIR) -> ModelBundle:
     if missing:
         raise ModelSpecError(f"모델 산출물이 없습니다 ({models_dir}): {missing}")
 
+    verified = verify_checksums(models_dir)          # ★ joblib.load(=pickle 실행) 전에 무결성 확인
     model = _load_model(paths[MODEL_FILE])
     feature_columns = _read_json(paths[FEATURE_COLUMNS_FILE])
     info = _read_json(paths[TRAINING_INFO_FILE])
@@ -240,6 +305,7 @@ def load_model_bundle(models_dir: Path | str = MODELS_DIR) -> ModelBundle:
         min_valid_frames=int(info["min_valid_frames"]),
         expects_dataframe=hasattr(model, "feature_names_in_"),
         training_info=info,
+        checksum_verified=verified,
     )
     logger.info("모델 로드 완료: %s", bundle.summary())
     return bundle
@@ -250,6 +316,11 @@ def load_model_bundle(models_dir: Path | str = MODELS_DIR) -> ModelBundle:
 # ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
+    if "--write-checksums" in sys.argv:
+        out = write_checksums()
+        print(f"[OK] {out} 작성:")
+        print(out.read_text(encoding="utf-8"), end="")
+        sys.exit(0)
     try:
         b = load_model_bundle()
     except ModelSpecError as e:
@@ -262,6 +333,7 @@ if __name__ == "__main__":
     print(f"  input features    : {s['n_features']} = {s['sequence_steps']} steps × {s['features_per_step']}")
     print(f"  min_valid_frames  : {s['min_valid_frames']}")
     print(f"  expects DataFrame : {b.expects_dataframe}")
+    print(f"  SHA256 verified   : {b.checksum_verified}")
     print("  classes (predict_proba 열 순서):")
     for i, c in enumerate(s["classes"]):
         print(f"    [{i}] {c['action_id']}  {c['label']}")
