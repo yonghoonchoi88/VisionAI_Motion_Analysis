@@ -1,0 +1,15 @@
+# ── 🔴 모델 호환성: 6일차 학습 환경과 반드시 동일 (joblib 로드 안정성) ──
+scikit-learn==1.9.1
+numpy==2.5.4
+joblib==1.6.0
+
+# ── 🟡 Pose·Tracking: 7~8일차와 같은 Keypoint·Track 결과를 얻기 위해 고정 ──
+ultralytics==8.4.203
+torch==2.15.0
+opencv-python==5.0.0.93
+lap==0.5.14              # 원본 uv.lock엔 없음 — 8일차 추적 시 ultralytics가 자동 설치한 것을 venv에서 직접 확인
+
+# ── ⚪ 새로 추가: FastAPI 추론 서버 ──
+fastapi
+uvicorn[standard]
+python-multipart         # 영상 파일 업로드(UploadFile) 수신에 필수
