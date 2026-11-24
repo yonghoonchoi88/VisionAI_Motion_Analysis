@@ -1,0 +1,28 @@
+== Vision AI 전체 흐름 검증 2026-11-24 10:20:42 ==
+   Django=http://localhost:8010  FastAPI=http://localhost:8011  영상=S03_A006_T01.mp4
+[1/6] FastAPI 단독 상태 (GET /api/v1/health)
+  {"status":"ok","model_ready":true,"error":null,"device":"cpu","window_strategy":"sliding","decision_rule":{"min_confidence":0.2,"min_margin":0.11},"model":{"model_type":"RandomForestClassifier","sklearn_version":"1.9.1","n_features":1140,"sequence_steps":30,"features_per_step":38,"min_valid_frames":10,"checksum_verified":true,"classes":[{"label":"bend_return","action_id":"A001"},{"label":"drink_return","action_id":"A004"},{"label":"leg_raise_lower","action_id":"A002"},{"label":"sit_stand","action_id":"A005"},{"label":"walk_turn_walk","action_id":"A003"},{"label":"wave","action_id":"A006"}]}}
+  ✅ PASS  모델 준비 완료
+[2/6] 검증용 계정 준비
+14 objects imported automatically (use -v 2 for details).
+
+  계정 exists smoke_tester
+[3/6] 로그인 (세션 + CSRF)
+  ✅ PASS  로그인 → 302 리다이렉트
+[4/6] 비로그인 차단 확인 (GET /api/v1/analyses/ without cookie)
+  ✅ PASS  비로그인 요청 → 403
+[5/6] 분석 요청 (POST /api/v1/analyses/) — 작업 ID가 즉시 와야 함
+  ✅ PASS  202 Accepted · 작업 #17 · 응답 0.04초 · 상태 PENDING · task 597a8664-36cb-404b-83b6-8687cd6dd7ac
+[6/6] 상태 폴링 (GET /api/v1/analyses/17/status/)
+  10:20:43  STARTED / INFERRING
+  10:20:46  SUCCESS / DONE
+  결과: SUCCESS · 1명의 동작을 예측했습니다. · AI 3.247초 · 전체 3.28초
+   Track 1: A006 wave conf=0.327 margin=0.137 → 확정
+  ✅ PASS  Worker가 결과를 저장함
+[DB] PostgreSQL 직접 조회 — 화면·API와 같은 값인지 (T06)
+ id |   username   | input_type | status  | stage | ai_sec | track_id | action_label | conf  | margin | is_uncertain 
+----+--------------+------------+---------+-------+--------+----------+--------------+-------+--------+--------------
+ 17 | smoke_tester | UPLOAD     | SUCCESS | DONE  |   3.25 |        1 | wave         | 0.327 |  0.137 | f
+(1 row)
+
+== 완료: 로그 reports/evidence/smoke/smoke_20261124_102042.log ==
