@@ -123,6 +123,75 @@ bash scripts/smoke_e2e.sh ~/ai_vision/subject10_pose_action/data/day05/videos/S0
 | **redis** | Celery job queue | store permanent data |
 | **postgres** | permanent storage of users · analysis jobs · per-person predictions | — |
 
+### Folder Structure
+
+The repo follows the folder structure in the development guide, and every file the guide lists is present. **＋** marks files added beyond the guide for verification and documentation.
+
+```text
+VisionAI_Motion_Analysis/            # vision_action_platform/ in the guide
+├── backend/                         # code shared by Django · DRF and the Celery Worker
+│   ├── manage.py
+│   ├── config/
+│   │   ├── __init__.py              # connects the Celery app when Django starts
+│   │   ├── settings.py              # apps · DB · templates · static/media · Redis · Celery
+│   │   ├── urls.py                  # /admin/ · accounts · analyses · /api/v1/
+│   │   ├── celery.py                # creates the Celery app · discovers each app's tasks.py
+│   │   └── wsgi.py · asgi.py
+│   ├── accounts/                    # uses Django's built-in User (no extra model)
+│   │   ├── urls.py · views.py       # sign-up · login · logout · ＋my page
+│   │   └── tests.py                 # sign-up · login · blocking anonymous access
+│   ├── analyses/
+│   │   ├── models.py                # AnalysisJob 1 : N PersonPrediction
+│   │   ├── migrations/              # 0001 initial → 0002 processing time → 0003 Korean labels → 0004 top-1/2 gap
+│   │   ├── serializers.py           # video · camera input checks, response fields, editable fields
+│   │   ├── views.py                 # DRF CRUD · status · own jobs only · enqueue after commit
+│   │   ├── urls.py                  # analysis page · dashboard URLs
+│   │   ├── api_urls.py           ＋ # DRF Router split out under /api/v1/ (in urls.py in the guide)
+│   │   ├── page_views.py            # analysis HTML · staff-only /dashboard/ · ORM aggregation
+│   │   ├── tasks.py                 # get video → call FastAPI → save result/failure · retry
+│   │   ├── services.py              # FastAPI HTTP call · timeout · error classes (optional in the guide)
+│   │   ├── camera_capture.py        # captures from an allowlisted IP Webcam for a fixed time
+│   │   ├── constants.py          ＋ # the 6 actions · status names in one place
+│   │   ├── admin.py                 # both models registered · list · search · filters
+│   │   └── tests.py                 # permissions · status · saving results
+│   ├── templates/
+│   │   ├── base.html · registration/login.html · accounts/signup.html
+│   │   ├── analyses/index.html · analyses/dashboard.html
+│   │   ├── analyses/detail.html  ＋ # job detail (+ _compare_cards · _history_table partials)
+│   │   ├── accounts/profile.html ＋ # my page (+ registration/password_change_*)
+│   │   └── 403.html · 404.html   ＋ # error pages (+ admin/base_site.html: dashboard link in Admin)
+│   ├── static/
+│   │   ├── css/app.css · js/analyses.js · js/dashboard.js
+│   │   └── vendor/chart.umd.min.js ＋ # Chart.js bundled in the repo instead of a CDN
+│   ├── requirements.txt
+│   └── Dockerfile                   # one image shared by Django and the Celery Worker
+├── ai_service/                      # FastAPI video inference (no DB access)
+│   ├── main.py                      # creates the FastAPI app · mounts the router
+│   ├── routers/predictions.py       # input checks → inference → JSON (/predict/video = /api/v1/predict/)
+│   ├── services/
+│   │   ├── model_loader.py          # loads joblib · JSON, cross-checks classes · features · size · ＋SHA256
+│   │   ├── pose_pipeline.py         # video → YOLO Pose · ByteTrack → 30-step sequence per person
+│   │   └── action_inference.py      # RF prediction → action · confidence per track · ＋top-1/2 gap
+│   ├── src/                         # 5 files from earlier practice [copied · unchanged]
+│   │   └── pose_utils · feature_utils · sequence_utils · realtime_utils · multi_person_utils
+│   ├── project.json                 # pose · inference settings + ＋window strategy · decision rule (0.20 / 0.11)
+│   ├── models/
+│   │   ├── rf_feature_columns.json · rf_training_info.json
+│   │   ├── SHA256SUMS.txt        ＋ # model file hashes — only matching files are loaded
+│   │   └── rf_action_baseline.joblib · yolo11n-pose.pt   # not in Git → copy via section 2 'Prepare the models'
+│   ├── scripts/                  ＋ # evaluate_holdout.py (choose on S02 · report S03) · make_test_videos.py
+│   ├── tests/                    ＋ # 45 FastAPI automated tests (+ pytest.ini · requirements-dev.txt)
+│   ├── requirements.txt
+│   └── Dockerfile
+├── compose.yaml                     # django · celery · fastapi · redis · postgres
+├── .env.example                     # variable names and sample values (the real .env is not in Git)
+├── .gitignore                       # excludes .env · models · videos · media
+├── scripts/smoke_e2e.sh          ＋ # login → upload → 202 → status → DB query with curl in one run
+├── docs/                         ＋ # API · design Q&A · step-by-step verification · troubleshooting · dev setup · diagrams
+├── reports/evidence/             ＋ # T01–T10 screenshots · logs · held-out results · A/B experiments
+└── README.md · README.en.md
+```
+
 ---
 
 ## 4. Database Design (ERD)

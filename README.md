@@ -123,6 +123,75 @@ bash scripts/smoke_e2e.sh ~/ai_vision/subject10_pose_action/data/day05/videos/S0
 | **redis** | Celery 작업 대기열 | 영구 데이터 저장 |
 | **postgres** | 사용자 · 분석 작업 · 사람별 예측 영구 저장 | — |
 
+### 폴더 구조
+
+개발 가이드의 폴더 구조를 그대로 따랐고, 가이드에 나온 파일은 모두 있습니다. **＋**는 검증·문서화를 위해 가이드보다 더 만든 파일입니다.
+
+```text
+VisionAI_Motion_Analysis/            # 가이드의 vision_action_platform/
+├── backend/                         # Django·DRF와 Celery Worker가 함께 쓰는 코드
+│   ├── manage.py
+│   ├── config/
+│   │   ├── __init__.py              # Django 시작 시 Celery 앱 연결
+│   │   ├── settings.py              # 앱 · DB · 템플릿 · 정적/미디어 · Redis · Celery 설정
+│   │   ├── urls.py                  # /admin/ · accounts · analyses · /api/v1/ 연결
+│   │   ├── celery.py                # Celery 앱 생성 · 각 앱의 tasks.py 탐색
+│   │   └── wsgi.py · asgi.py
+│   ├── accounts/                    # Django 기본 User 사용 (모델 추가 없음)
+│   │   ├── urls.py · views.py       # 회원가입 · 로그인 · 로그아웃 · ＋내 정보
+│   │   └── tests.py                 # 회원가입 · 로그인 · 비로그인 접근 제한
+│   ├── analyses/
+│   │   ├── models.py                # AnalysisJob 1 : N PersonPrediction
+│   │   ├── migrations/              # 0001 초기 → 0002 처리 시간 → 0003 한글 필드명 → 0004 1·2등 차이
+│   │   ├── serializers.py           # 영상 · 카메라 입력 검사, 응답 필드, 수정 허용 필드
+│   │   ├── views.py                 # DRF CRUD · 상태 조회 · 내 작업만 조회 · 커밋 후 작업 등록
+│   │   ├── urls.py                  # 분석 화면 · 대시보드 URL
+│   │   ├── api_urls.py           ＋ # DRF Router를 /api/v1/로 분리 (가이드는 urls.py에 함께)
+│   │   ├── page_views.py            # 분석 HTML · 관리자 전용 /dashboard/ · ORM 집계
+│   │   ├── tasks.py                 # 영상 확보 → FastAPI 호출 → 결과·실패 저장 · 재시도
+│   │   ├── services.py              # FastAPI HTTP 호출 · 타임아웃 · 오류 분류 (가이드의 선택 작성)
+│   │   ├── camera_capture.py        # 허용된 IP Webcam에서 정해진 시간만 수집
+│   │   ├── constants.py          ＋ # Action 6종 · 상태 표기를 한 곳에서 관리
+│   │   ├── admin.py                 # 두 모델 등록 · 목록 · 검색 · 필터
+│   │   └── tests.py                 # 조회 권한 · 상태 · 결과 저장
+│   ├── templates/
+│   │   ├── base.html · registration/login.html · accounts/signup.html
+│   │   ├── analyses/index.html · analyses/dashboard.html
+│   │   ├── analyses/detail.html  ＋ # 작업 상세 (+ _compare_cards · _history_table 조각)
+│   │   ├── accounts/profile.html ＋ # 내 정보 (+ registration/password_change_*)
+│   │   └── 403.html · 404.html   ＋ # 오류 화면 (+ admin/base_site.html: Admin에 대시보드 링크)
+│   ├── static/
+│   │   ├── css/app.css · js/analyses.js · js/dashboard.js
+│   │   └── vendor/chart.umd.min.js ＋ # Chart.js를 CDN 대신 저장소에 포함
+│   ├── requirements.txt
+│   └── Dockerfile                   # Django와 Celery Worker가 같은 이미지 사용
+├── ai_service/                      # FastAPI 영상 추론 (DB 접근 없음)
+│   ├── main.py                      # FastAPI 앱 생성 · Router 연결
+│   ├── routers/predictions.py       # 입력 검사 → 추론 → JSON (/predict/video = /api/v1/predict/)
+│   ├── services/
+│   │   ├── model_loader.py          # joblib · JSON 로드, Class · Feature · 차원 교차 검증 · ＋SHA256 확인
+│   │   ├── pose_pipeline.py         # 영상 → YOLO Pose · ByteTrack → 사람별 30-Step Sequence
+│   │   └── action_inference.py      # RF 예측 → Track별 Action · Confidence · ＋1·2등 차이
+│   ├── src/                         # 이전 실습 코드 5개 [복사 · 수정 없음]
+│   │   └── pose_utils · feature_utils · sequence_utils · realtime_utils · multi_person_utils
+│   ├── project.json                 # Pose · 추론 설정 + ＋Window 전략 · 판단 기준 (0.20 / 0.11)
+│   ├── models/
+│   │   ├── rf_feature_columns.json · rf_training_info.json
+│   │   ├── SHA256SUMS.txt        ＋ # 모델 파일 해시 — 같은 파일만 로드
+│   │   └── rf_action_baseline.joblib · yolo11n-pose.pt   # Git 제외 → 2장 '모델 준비'로 복사
+│   ├── scripts/                  ＋ # evaluate_holdout.py (S02 선택 · S03 보고) · make_test_videos.py
+│   ├── tests/                    ＋ # FastAPI 자동 테스트 45개 (+ pytest.ini · requirements-dev.txt)
+│   ├── requirements.txt
+│   └── Dockerfile
+├── compose.yaml                     # django · celery · fastapi · redis · postgres
+├── .env.example                     # 변수명과 예시 값 (실제 .env는 Git 제외)
+├── .gitignore                       # .env · 모델 · 영상 · media 제외
+├── scripts/smoke_e2e.sh          ＋ # 로그인 → 업로드 → 202 → 상태 → DB 조회를 curl로 한 번에
+├── docs/                         ＋ # API · 설계 Q&A · 단계별 검증 · 문제 해결 · 개발 환경 · 다이어그램
+├── reports/evidence/             ＋ # T01–T10 캡처 · 로그 · Held-out 결과 · A/B 실험
+└── README.md · README.en.md
+```
+
 ---
 
 ## 4. DB 설계 (ERD)
