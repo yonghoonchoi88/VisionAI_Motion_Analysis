@@ -3,6 +3,7 @@
   input features    : 1140 = 30 steps × 38
   min_valid_frames  : 10
   expects DataFrame : False
+  SHA256 verified   : True
   classes (predict_proba 열 순서):
     [0] A001  bend_return
     [1] A004  drink_return
