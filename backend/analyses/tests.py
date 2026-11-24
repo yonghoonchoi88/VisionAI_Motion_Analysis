@@ -117,6 +117,15 @@ class AnalysisApiTests(TestCase):
         self.assertEqual(self.list_url, "/api/v1/analyses/")
         self.assertEqual(reverse("analysisjob-status", args=[7]), "/api/v1/analyses/7/status/")
 
+    def test_admin_links_to_dashboard(self):
+        """Django Admin 모든 화면 상단에서 관리자 대시보드로 이동할 수 있다 (개발 가이드 10단계)."""
+        self.client.force_login(self.admin)
+        self.admin.is_superuser = True
+        self.admin.save()
+        html = self.client.get("/admin/").content.decode()
+        self.assertIn('href="/dashboard/"', html)
+        self.assertIn("Vision AI 관리자", html)
+
     def test_no_person_is_success_with_zero_predictions(self):
         job_id = self.create_upload(result=fake_result(0)).json()["id"]
         job = AnalysisJob.objects.get(pk=job_id)

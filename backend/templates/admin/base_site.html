@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% comment %}
+  Django Admin ↔ 관리자 대시보드 연결 (개발 가이드 10단계)
+  templates/admin/에 파일을 두는 것만으로는 메뉴가 생기지 않으므로,
+  Admin이 모든 화면에서 쓰는 base_site.html을 덮어써 상단 링크를 추가한다.
+{% endcomment %}
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | Vision AI 관리자{% endblock %}
+
+{% block branding %}
+  <div id="site-name"><a href="{% url 'admin:index' %}">Vision AI 관리자</a></div>
+{% endblock %}
+
+{% block userlinks %}
+  <a href="{% url 'dashboard' %}">분석 대시보드</a> /
+  <a href="{% url 'analyses:index' %}">서비스 화면</a> /
+  {{ block.super }}
+{% endblock %}
+
+{% block nav-global %}
+  <a class="button" href="{% url 'dashboard' %}" style="margin-left:auto">📊 분석 대시보드 열기</a>
+{% endblock %}

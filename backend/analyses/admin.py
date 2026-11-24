@@ -5,6 +5,11 @@ from django.db.models import Count
 
 from .models import AnalysisJob, PersonPrediction
 
+# Admin 화면 제목 (상단 링크로 /dashboard/와 연결: templates/admin/base_site.html)
+admin.site.site_header = "Vision AI 관리자"
+admin.site.site_title = "Vision AI 관리자"
+admin.site.index_title = "분석 작업 · 사람별 예측 관리"
+
 
 class PersonPredictionInline(admin.TabularInline):
     model = PersonPrediction
