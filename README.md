@@ -3,7 +3,7 @@
 > 6일차에 학습한 **6개 동작 인식 Random Forest**를 재학습 없이 재사용한 Vision AI 웹 서비스
 > Django · DRF · Celery · Redis · PostgreSQL · FastAPI · Docker Compose
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB) ![Django](https://img.shields.io/badge/Django-6.1-092E20) ![FastAPI](https://img.shields.io/badge/FastAPI-009688) ![Celery](https://img.shields.io/badge/Celery-5.7-37814A) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1) ![Docker](https://img.shields.io/badge/Docker_Compose-5_services-2496ED) ![Tests](https://img.shields.io/badge/tests-75_passed-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB) ![Django](https://img.shields.io/badge/Django-6.1-092E20) ![FastAPI](https://img.shields.io/badge/FastAPI-009688) ![Celery](https://img.shields.io/badge/Celery-5.7-37814A) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1) ![Docker](https://img.shields.io/badge/Docker_Compose-5_services-2496ED) ![Tests](https://img.shields.io/badge/tests-78_passed-brightgreen)
 
 ---
 
@@ -46,13 +46,21 @@ docker compose exec django python manage.py createsuperuser    # 관리자 계�
 docker compose ps                                              # 5개 모두 Up 확인
 ```
 
-**③ 접속**
+**③ 접속** (경로 규칙은 개발 가이드 5장의 권장 설계를 따름)
 
-| 화면 | 주소 |
+| 대상 | 주소 |
 |---|---|
-| 사용자 분석 화면 | http://localhost:8000/ |
-| 관리자 대시보드 · Django Admin | http://localhost:8000/dashboard/ · http://localhost:8000/admin/ |
-| FastAPI 문서 | http://localhost:8001/docs |
+| 회원가입 · 로그인 | http://localhost:8000/accounts/signup/ · http://localhost:8000/accounts/login/ |
+| 사용자 분석 화면 | http://localhost:8000/analyses/ |
+| 분석 API (DRF) | `POST`·`GET` http://localhost:8000/api/v1/analyses/ · `GET /api/v1/analyses/{id}/` · `GET /api/v1/analyses/{id}/status/` |
+| 관리자 대시보드 · Django Admin | http://localhost:8000/dashboard/ · http://localhost:8000/admin/ (Admin 상단에 대시보드 링크) |
+| FastAPI 문서 · 추론 | http://localhost:8001/docs · `POST /api/v1/predict/` (과제 문서 계약 `POST /predict/video`와 같은 함수) |
+
+**④ 전체 흐름 확인** — 로그인 → 업로드 → 202 + 작업 ID → 상태 조회 → PostgreSQL 조회까지 curl로 한 번에 확인하고 로그를 남깁니다.
+
+```bash
+bash scripts/smoke_e2e.sh ~/ai_vision/subject10_pose_action/data/day05/videos/S03/S03_A006_T01.mp4
+```
 
 > 포트가 이미 사용 중이면 `.env`에서 `DJANGO_HOST_PORT`·`FASTAPI_HOST_PORT`만 바꾸면 됩니다(이 저장소의 시연 환경은 8010·8011). IP Webcam은 휴대폰과 PC를 같은 Wi-Fi에 두고 앱의 `IP:포트`를 `ALLOWED_CAMERA_HOSTS`에 등록합니다.
 > Docker 없이 실행하기 · 테스트 실행 → [`docs/development.md`](docs/development.md)
@@ -104,7 +112,7 @@ Django는 작업을 DB에 저장하고 **커밋이 끝난 뒤** Celery에 등록
 | IP Webcam | 허용 목록의 카메라만, **5~10초(기본 8초)** 수집 → 30fps · 640px WebM 저장 → 업로드와 같은 추론 |
 | Window 전략 | `auto`: 사람이 보인 시간 ≤ 12초면 학습과 같은 **전체 구간 1개**, 길면 5초 sliding Window 평균 (`hybrid` 등 4가지 중 S02로 선택) |
 | 판단 불확실 | `confidence < min_confidence` **또는** `1등 − 2등 < min_margin` (`ai_service/project.json`의 `decision`, S02로 선택) |
-| FastAPI 입출력 | `POST /predict/video` (영상 파일) → 사람별 `track_id` · `action_id` · `confidence` · `margin`(2등과 차이) · 확률 · 입력 품질 + 적용한 판단 기준 · 처리 시간 |
+| FastAPI 입출력 | `POST /api/v1/predict/` = `POST /predict/video` (영상 파일) → 사람별 `track_id` · `action_id` · `confidence` · `margin`(2등과 차이) · 확률 · 입력 품질 + 적용한 판단 기준 · 처리 시간 |
 
 > 응답 형식과 오류 코드 → [`docs/api.md`](docs/api.md)
 
@@ -164,7 +172,24 @@ python -m scripts.evaluate_holdout --videos <subject10_pose_action>/data/day05/v
 | T09 예외 처리 | ✅ 손상 파일 · 카메라 끊김 · AI 서버 장애 → FAILURE + 사유 | 위 캡처 · 자동 테스트 |
 | T10 Docker | ✅ `docker compose restart` 후 작업 · 예측 유지 | [`T10_after_restart.txt`](reports/evidence/T10_after_restart.txt) |
 
-자동 테스트 75개 (FastAPI 44 · Django 31) — [`docs/development.md`](docs/development.md)
+자동 테스트 78개 (FastAPI 45 · Django 33) — [`docs/development.md`](docs/development.md) · 단계별 수동 검증(브라우저 · Swagger · curl · Admin · Celery 로그 · PostgreSQL) — [`docs/verification.md`](docs/verification.md)
+
+### 최종 완료 체크리스트 (개발 가이드 7장)
+
+| 항목 | 상태 | 검증 |
+|---|---|---|
+| 학습 모델 로딩 및 FastAPI 동작 추론 | ✅ | [1·2단계](docs/verification.md) · T01 |
+| Django · PostgreSQL · Admin 연결 | ✅ | 3단계 · T08 |
+| 회원가입 · 로그인 · 사용자 권한 | ✅ | 4단계 · T07 |
+| DRF 분석 작업 생성 · 조회 | ✅ | 5단계 · T07 |
+| Redis · Celery 비동기 실행 | ✅ | 6단계 · T05 |
+| 영상 업로드 → AI 추론 → DB 저장 | ✅ | 7단계 · T02 · T06 |
+| IP Webcam → AI 추론 → DB 저장 | ✅ | 8단계 · T03 |
+| 사용자 분석 화면과 결과 출력 | ✅ | 9단계 · T02 |
+| 관리자 대시보드 실제 통계 (SQL 결과와 대조) | ✅ | 10단계 · T08 |
+| Docker Compose 5개 서비스 통합 · 재시작 | ✅ | 11단계 · T10 |
+
+**작업 상태 표기**: 과제 문서 4장의 후보이자 Celery 표준인 `PENDING → STARTED → SUCCESS / FAILURE`로 통일했습니다. 개발 가이드의 `PROCESSING · COMPLETED · FAILED`와의 대응은 [`docs/verification.md`](docs/verification.md#작업-상태-표기)에 있습니다.
 
 ### 설계 결정 — 교재 방식과 다르게 한 점
 

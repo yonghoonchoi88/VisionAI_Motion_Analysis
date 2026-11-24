@@ -31,8 +31,8 @@ celery -A config worker --loglevel=INFO --concurrency=1
 ## 테스트
 
 ```bash
-cd ai_service && python -m pytest                          # 44개 — GPU·YOLO 불필요 (가짜 Pose 모델·가짜 RF)
-cd backend && DB_ENGINE=sqlite python manage.py test       # 31개 — FastAPI·카메라는 가짜로 대체 (PostgreSQL에서도 통과)
+cd ai_service && python -m pytest                          # 45개 — GPU·YOLO 불필요 (가짜 Pose 모델·가짜 RF)
+cd backend && DB_ENGINE=sqlite python manage.py test       # 33개 — FastAPI·카메라는 가짜로 대체 (PostgreSQL에서도 통과)
 ```
 
 | 영역 | 무엇을 검증하나 |

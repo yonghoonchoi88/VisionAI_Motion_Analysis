@@ -110,7 +110,7 @@
 | 장애 격리 | 추론 중 YOLO가 죽어도 DB에는 아무 일도 일어나지 않고, Worker가 `FAILURE`와 사유를 기록합니다. 오늘 torchvision 오류 때 실제로 fastapi만 멈추고 DB는 무사했습니다. |
 | 교체·확장 | FastAPI가 상태를 갖지 않으므로 GPU 서버로 옮기거나 여러 대로 늘려도 DB 설정을 건드릴 필요가 없습니다. |
 | 보안 | DB 비밀번호는 django·celery 컨테이너에만 있습니다. `compose.yaml`의 fastapi에는 DB 관련 환경변수가 없습니다. |
-| 테스트 | FastAPI는 DB 없이 가짜 Pose 모델로 44개 테스트를 돌릴 수 있습니다. |
+| 테스트 | FastAPI는 DB 없이 가짜 Pose 모델로 45개 테스트를 돌릴 수 있습니다. |
 
 ---
 
