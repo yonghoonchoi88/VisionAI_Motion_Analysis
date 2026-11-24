@@ -120,23 +120,25 @@ Django는 작업을 DB에 저장하고 **커밋이 끝난 뒤** Celery에 등록
 
 ## 7. 실행 결과와 검증
 
+> 모든 화면은 판단 기준(conf ≥ 0.20 · 1·2등 차이 ≥ 0.11)을 적용한 뒤 Docker Compose 5개 서비스에서 찍었습니다. 이미지를 누르면 원본 크기로 열립니다.
+
 | 정상 분석 | 오류 · 실패 |
 |---|---|
-| ![정상](reports/evidence/screenshots/success.png) | ![실패](reports/evidence/screenshots/failure.png) |
-| `walk_turn_walk.mp4` 업로드 → **A003 walk_turn_walk 66%**, AI 추론 7.2초 (Docker CPU) | 텍스트 파일을 `broken.mp4`로 업로드 → `FAILURE` · `[VIDEO_UNREADABLE] 영상을 열 수 없습니다` |
+| <a href="reports/evidence/screenshots/T02_upload_result.png"><img src="reports/evidence/screenshots/T02_upload_result.png" alt="정상 분석"></a> | <a href="reports/evidence/screenshots/T09_broken_file.png"><img src="reports/evidence/screenshots/T09_broken_file.png" alt="실패"></a> |
+| 학습하지 않은 사람의 영상 `S03_A002_T01.mp4` 업로드 → **A002 leg_raise_lower 확정** (2등과 차이가 기준 이상) | 텍스트 파일을 `broken.mp4`로 업로드 → `FAILURE` · `[VIDEO_UNREADABLE] 영상을 열 수 없습니다` |
 
 | 관리자 화면 (Django Admin) | 관리자 대시보드 |
 |---|---|
-| ![Admin](reports/evidence/screenshots/admin.png) | ![대시보드](reports/evidence/screenshots/dashboard.png) |
-| 작업 목록 · 상태/입력 방식 필터 · 사용자 검색 | 동작별 예측 건수 · 작업 상태별 건수 + 입력 방식 비교 (전체 사용자) |
+| <a href="reports/evidence/screenshots/T08_admin.png"><img src="reports/evidence/screenshots/T08_admin.png" alt="Admin"></a> | <a href="reports/evidence/screenshots/T08_dashboard.png"><img src="reports/evidence/screenshots/T08_dashboard.png" alt="대시보드"></a> |
+| 작업 목록 · 상태/입력 방식 필터 · 사용자 검색 · 상단 '분석 대시보드' 링크 | 동작별 예측 건수 · 작업 상태별 건수 + 입력 방식 비교 (전체 사용자) |
 
 <details>
 <summary><b>추가 화면</b> — IP Webcam · 두 사람 · 입력 방식 비교</summary>
 
 | IP Webcam | 두 사람 (Track 분리) | 입력 방식 비교 |
 |---|---|---|
-| ![IP Webcam](reports/evidence/screenshots/webcam.png) | ![두 사람](reports/evidence/screenshots/detail_two_tracks.png) | ![비교](reports/evidence/screenshots/compare.png) |
-| 8초 수집 → wave 30% · 판단 불확실 · 선택 동작과 일치 | 한 작업에 Track 1 · 3 두 사람의 예측 | 업로드 vs IP Webcam: 신뢰도 · 일치율 · 처리 시간 |
+| <a href="reports/evidence/screenshots/T03_webcam.png"><img src="reports/evidence/screenshots/T03_webcam.png" alt="IP Webcam"></a> | <a href="reports/evidence/screenshots/T04_two_tracks.png"><img src="reports/evidence/screenshots/T04_two_tracks.png" alt="두 사람"></a> | <a href="reports/evidence/screenshots/compare.png"><img src="reports/evidence/screenshots/compare.png" alt="비교"></a> |
+| 휴대폰 IP Webcam 8초 수집 → 사람별 예측 · 판단 근거 | 악수 영상(학습하지 않은 동작) → Track 2개 분리, 두 명 모두 **판단 불확실** | 업로드 vs IP Webcam: 신뢰도 · 일치율 · 처리 시간 |
 
 </details>
 
@@ -177,15 +179,16 @@ python -m scripts.evaluate_holdout --videos ~/ai_vision/subject10_pose_action/da
 
 | 테스트 | 결과 | 증거 |
 |---|---|---|
-| T01 모델 불러오기 | ✅ 6 Class · 1,140 Feature · 교차 검증 · **SHA256 확인 후 로드** | [`T01_model_load.txt`](reports/evidence/T01_model_load.txt) |
-| T02 영상 업로드 | ✅ 작업 등록 → 결과 저장. 새 사람(S03) Top-1 5/6 · 확정 2건 모두 정답 (학습 원본 6/6은 이관 회귀 확인용) | [`ab_window_strategy.md`](reports/evidence/ab_window_strategy.md) · [`holdout_eval.md`](reports/evidence/holdout/holdout_eval.md) |
-| T03 IP Webcam | ✅ 8초 수집 → wave 1순위 (3회 일관) | [`ab_capture_condition.md`](reports/evidence/ab_capture_condition.md) |
-| T04 사람별 결과 | ✅ 2인 영상 → Track별 예측 분리 | [`01_sbu_shaking_hands.json`](reports/evidence/T02_T04/01_sbu_shaking_hands.json) |
-| T05 · T06 비동기 · 영구 저장 | ✅ 즉시 202 + 작업 ID, 새로고침 후 유지 | 자동 테스트 |
-| T07 CRUD 권한 | ✅ 다른 회원의 작업은 조회 · 수정 · 삭제 모두 404 | 자동 테스트 |
-| T08 관리자 | ✅ staff만 대시보드 · 전체 기록 | 위 캡처 |
-| T09 예외 처리 | ✅ 손상 파일 · 카메라 끊김 · AI 서버 장애 → FAILURE + 사유 | 위 캡처 · 자동 테스트 |
-| T10 Docker | ✅ `docker compose restart` 후 작업 · 예측 유지 | [`T10_after_restart.txt`](reports/evidence/T10_after_restart.txt) |
+| T01 모델 불러오기 | ✅ 6 Class · 1,140 Feature · 교차 검증 · **SHA256 확인 후 로드** · Swagger에서 FastAPI 단독 추론 | <a href="reports/evidence/screenshots/T01_swagger_predict.png"><img src="reports/evidence/screenshots/T01_swagger_predict.png" width="260" alt="T01_swagger_predict.png"></a><br>[`T01_model_load.txt`](reports/evidence/T01_model_load.txt) |
+| T02 영상 업로드 | ✅ 작업 등록 → 결과 저장. 새 사람(S03) Top-1 5/6 · 확정 2건 모두 정답 | <a href="reports/evidence/screenshots/T02_upload_result.png"><img src="reports/evidence/screenshots/T02_upload_result.png" width="260" alt="T02_upload_result.png"></a><br>[`holdout_eval.md`](reports/evidence/holdout/holdout_eval.md) |
+| T03 IP Webcam | ✅ 허용 카메라에서 8초 수집 → 같은 추론 → 저장 | <a href="reports/evidence/screenshots/T03_webcam.png"><img src="reports/evidence/screenshots/T03_webcam.png" width="260" alt="T03_webcam.png"></a> |
+| T04 사람별 결과 | ✅ 2인 영상 → 한 작업에 Track별 예측 2건 | <a href="reports/evidence/screenshots/T04_two_tracks.png"><img src="reports/evidence/screenshots/T04_two_tracks.png" width="260" alt="T04_two_tracks.png"></a> |
+| T05 비동기 처리 | ✅ 요청 즉시 **202 + 작업 ID (0.1초)**, 처리는 Celery Worker | <a href="reports/evidence/screenshots/T05_async_smoke.png"><img src="reports/evidence/screenshots/T05_async_smoke.png" width="260" alt="T05_async_smoke.png"></a><br>[`smoke 로그`](reports/evidence/smoke/) |
+| T06 영구 저장 | ✅ 새로고침 후에도 같은 작업·예측 · PostgreSQL 조회 값 = API 값 | <a href="reports/evidence/screenshots/T06_after_refresh.png"><img src="reports/evidence/screenshots/T06_after_refresh.png" width="260" alt="T06_after_refresh.png"></a> |
+| T07 CRUD 권한 | ✅ 다른 회원의 작업은 조회 · 수정 · 삭제 모두 **404** | <a href="reports/evidence/screenshots/T07_other_user_404.png"><img src="reports/evidence/screenshots/T07_other_user_404.png" width="260" alt="T07_other_user_404.png"></a> |
+| T08 관리자 | ✅ staff만 대시보드 · 전체 기록, 일반 회원 **403** | <a href="reports/evidence/screenshots/T08_dashboard.png"><img src="reports/evidence/screenshots/T08_dashboard.png" width="260" alt="T08_dashboard.png"></a><br><a href="reports/evidence/screenshots/T08_dashboard_forbidden.png"><img src="reports/evidence/screenshots/T08_dashboard_forbidden.png" width="260" alt="T08_dashboard_forbidden.png"></a> |
+| T09 예외 처리 | ✅ 손상 파일 · 카메라 끊김 → FAILURE + 사용자용 사유 | <a href="reports/evidence/screenshots/T09_broken_file.png"><img src="reports/evidence/screenshots/T09_broken_file.png" width="260" alt="T09_broken_file.png"></a><br><a href="reports/evidence/screenshots/T09_camera_lost.png"><img src="reports/evidence/screenshots/T09_camera_lost.png" width="260" alt="T09_camera_lost.png"></a> |
+| T10 Docker | ✅ `docker compose restart` 후 5개 서비스 Up · 작업 · 예측 유지 | <a href="reports/evidence/screenshots/T10_restart.png"><img src="reports/evidence/screenshots/T10_restart.png" width="260" alt="T10_restart.png"></a><br>[`T10_after_restart.txt`](reports/evidence/T10_after_restart.txt) |
 
 자동 테스트 78개 (FastAPI 45 · Django 33) — [`docs/development.md`](docs/development.md) · 단계별 수동 검증(브라우저 · Swagger · curl · Admin · Celery 로그 · PostgreSQL) — [`docs/verification.md`](docs/verification.md)
 
