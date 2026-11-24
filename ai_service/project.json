@@ -17,8 +17,8 @@
     "prediction_interval_sec": 0.25
   },
   "decision": {
-    "min_confidence": 0.28,
-    "min_margin": 0.03
+    "min_confidence": 0.2,
+    "min_margin": 0.11
   },
   "tracking": {
     "tracker": "bytetrack.yaml",
@@ -28,5 +28,5 @@
     "max_video_seconds": 60
   },
   "_comment_strategy": "strategy: sliding(7일차 5초 Window) | whole_track(6일차 학습처럼 사람별 전체 구간 1개) | auto(사람이 보인 시간이 whole_track_max_seconds 이하면 whole_track, 아니면 sliding) | hybrid(전체 구간 확률과 sliding Window 평균 확률을 반씩 섞음). 환경변수 WINDOW_STRATEGY로 덮어쓰기 가능.",
-  "_comment_decision": "판단 불확실 = confidence < min_confidence 또는 (1등-2등 확률 차) < min_margin. 값과 window.strategy는 scripts/evaluate_holdout.py가 S02(검증용 사람)+SBU(미학습 동작)로 고른 것 (2026-11-24, reports/evidence/holdout/holdout_eval.md). 환경변수 MIN_CONFIDENCE·MIN_MARGIN으로 덮어쓰기 가능."
+  "_comment_decision": "판단 불확실 = confidence < min_confidence 또는 (1등-2등 확률 차) < min_margin. 값과 window.strategy는 scripts/evaluate_holdout.py가 S02(검증용 사람) + 원본 SBU 3개(미학습 동작 6명)로 고른 것 (2026-11-24, reports/evidence/holdout/holdout_eval.md). 환경변수 MIN_CONFIDENCE·MIN_MARGIN으로 덮어쓰기 가능."
 }
