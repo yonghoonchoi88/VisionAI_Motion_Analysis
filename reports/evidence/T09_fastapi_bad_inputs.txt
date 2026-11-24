@@ -1,0 +1,8 @@
+== no_person.mp4
+{"status":"NO_PERSON","message":"영상에서 사람을 찾지 못했습니다.","person_count":0,"predictions":[],"skipped_tracks":[],"video":{"filename":"no_person.mp4","fps":25.0,"fps_assumed":false,"frame_count":75,"processed_frames":75,"duration_sec":3.0,"width":640,"height":480},"uncertain_threshold":0.2,"decision_rule":{"min_confidence":0.2,"min_margin":0.11},"processing_time_sec":2.13} [HTTP 200]
+== too_short.mp4
+{"status":"NO_VALID_TRACK","message":"사람이 검출되었지만 판단에 필요한 만큼 오래 보이지 않았습니다.","person_count":0,"predictions":[],"skipped_tracks":[{"track_id":1,"seen_frames":7,"valid_frames":7,"reason":"유효 Frame 부족 (7 < 10)"},{"track_id":2,"seen_frames":5,"valid_frames":5,"reason":"유효 Frame 부족 (5 < 10)"}],"video":{"filename":"too_short.mp4","fps":25.0,"fps_assumed":false,"frame_count":7,"processed_frames":7,"duration_sec":0.28,"width":640,"height":480},"uncertain_threshold":0.2,"decision_rule":{"min_confidence":0.2,"min_margin":0.11},"processing_time_sec":0.205} [HTTP 200]
+== broken.mp4
+{"detail":{"code":"VIDEO_UNREADABLE","message":"영상을 열 수 없습니다. 손상되었거나 지원하지 않는 코덱입니다."}} [HTTP 422]
+== notes.txt
+{"detail":{"code":"UNSUPPORTED_FORMAT","message":"지원하지 않는 형식입니다: '.txt' (허용: ['.avi', '.mkv', '.mov', '.mp4', '.webm'])"}} [HTTP 400]

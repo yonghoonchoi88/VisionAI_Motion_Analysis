@@ -1,0 +1,26 @@
+== 2026-11-24 12:01:39 대시보드 숫자와 DB 직접 조회 대조
+
+== ① 동작별 예측 건수 (대시보드 막대: 확정 + 판단 불확실)
+  action_label   | total | confirmed | uncertain 
+-----------------+-------+-----------+-----------
+ bend_return     |     1 |         1 |         0
+ drink_return    |     3 |         1 |         2
+ leg_raise_lower |     6 |         2 |         4
+ sit_stand       |     1 |         0 |         1
+ walk_turn_walk  |     1 |         1 |         0
+ wave            |     8 |         4 |         4
+(6 rows)
+
+== ② 상태별 작업 건수 (대시보드 도넛)
+ status  | count 
+---------+-------
+ FAILURE |     5
+ SUCCESS |    18
+(2 rows)
+
+== ③ 상단 카드 (전체 작업 · 사람별 예측)
+ jobs | predictions 
+------+-------------
+   23 |          20
+(1 row)
+
