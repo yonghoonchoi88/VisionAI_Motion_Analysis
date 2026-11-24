@@ -21,3 +21,7 @@
 
 **주의**: day04 영상은 학습 원본일 가능성이 높아 정확도 증거가 아니라 '이관 파이프라인 회귀 확인'임
 **알려진 한계**: leg_raise_lower에서 ByteTrack ID가 바뀌어 한 사람이 track 1·3으로 분리됨
+
+---
+
+**후속 (2026-11-24)** — 위 비교는 학습 원본일 가능성이 높은 day04 영상이라, 학습하지 않은 사람(S02)으로 4가지 전략을 다시 비교했습니다: `auto`·`whole_track` 3/6, `sliding`·`hybrid` 4/6 → 기본 전략을 **`sliding`**으로 변경. S03 결과와 판단 기준은 [`holdout/holdout_eval.md`](holdout/holdout_eval.md).

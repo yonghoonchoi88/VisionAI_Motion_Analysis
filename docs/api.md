@@ -68,8 +68,8 @@
 ### `GET /health`
 
 ```json
-{"status": "ok", "model_ready": true, "error": null, "device": "cpu", "window_strategy": "auto",
- "decision_rule": {"min_confidence": 0.55, "min_margin": 0.0},
+{"status": "ok", "model_ready": true, "error": null, "device": "cpu", "window_strategy": "sliding",
+ "decision_rule": {"min_confidence": 0.28, "min_margin": 0.03},
  "model": {"model_type": "RandomForestClassifier", "n_features": 1140, "sequence_steps": 30,
            "checksum_verified": true, "classes": ["..."]}}
 ```

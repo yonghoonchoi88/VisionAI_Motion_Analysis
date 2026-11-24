@@ -181,7 +181,9 @@
 ```
 기준을 0.3으로 낮추면 **학습하지 않은 동작까지 '확신'으로 표시**하게 되므로 낮추지 않았습니다.
 
-**개선 (11/24) — 기준을 2개로:** 위 분포를 다시 보면 새 사람의 정답(IP Webcam wave 0.30)은 2등과 **0.11** 벌어져 있고, 학습하지 않은 동작(SBU 악수)은 2등과 **0.04~0.07**밖에 차이가 나지 않습니다. 1등 확률 하나로는 둘을 못 나누지만 **1·2등 차이(margin)**를 함께 보면 나눌 수 있습니다. 그래서 `confidence < min_confidence 또는 margin < min_margin`이면 불확실로 바꾸고, 두 값은 S02(검증용 사람)와 SBU 영상만으로 고르며 S03은 결과 보고에만 씁니다 → `scripts/evaluate_holdout.py`, [`holdout_eval.md`](../reports/evidence/holdout/holdout_eval.md) 화면에는 Confidence와 함께 Class별 확률, 유효 Frame 비율(입력 품질)을 같이 보여 줍니다. → [`ab_capture_condition.md`](../reports/evidence/ab_capture_condition.md)
+**개선 (11/24) — 기준을 2개로:** 위 분포를 다시 보면 새 사람의 정답(IP Webcam wave 0.30)은 2등과 **0.11** 벌어져 있고, 학습하지 않은 동작(SBU 악수)은 2등과 **0.04~0.07**밖에 차이가 나지 않습니다. 1등 확률 하나로는 둘을 못 나누지만 **1·2등 차이(margin)**를 함께 보면 나눌 수 있습니다. 그래서 `confidence < min_confidence 또는 margin < min_margin`이면 불확실로 바꾸고, 두 값은 S02(검증용 사람)와 SBU 영상만으로 고르며 S03은 결과 보고에만 씁니다 → `scripts/evaluate_holdout.py`, [`holdout_eval.md`](../reports/evidence/holdout/holdout_eval.md)
+
+**결과:** S02로 고른 기준은 `confidence ≥ 0.28` 그리고 `margin ≥ 0.03`. 기존 0.55는 S03에서 1등이 6/6 정답이었는데도 확정 0건이었고, 바꾼 기준은 S03 확정 2건이 모두 정답, 오답 1건은 보류, 학습하지 않은 동작(SBU) 확정 0건입니다. 화면에는 Confidence와 함께 Class별 확률, 유효 Frame 비율(입력 품질)을 같이 보여 줍니다. → [`ab_capture_condition.md`](../reports/evidence/ab_capture_condition.md)
 
 ### Q13. 영상이 여러 번 들어온다면?
 

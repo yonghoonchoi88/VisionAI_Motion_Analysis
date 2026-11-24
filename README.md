@@ -110,8 +110,8 @@ Django는 작업을 DB에 저장하고 **커밋이 끝난 뒤** Celery에 등록
 | Pose · 추적 | `yolo11n-pose.pt` + ByteTrack, 원본 `src/` 5개를 수정 없이 재사용 |
 | 업로드 영상 | `.mp4 .avi .mov .mkv .webm`, 최대 200MB · 60초 |
 | IP Webcam | 허용 목록의 카메라만, **5~10초(기본 8초)** 수집 → 30fps · 640px WebM 저장 → 업로드와 같은 추론 |
-| Window 전략 | `auto`: 사람이 보인 시간 ≤ 12초면 학습과 같은 **전체 구간 1개**, 길면 5초 sliding Window 평균 (`hybrid` 등 4가지 중 S02로 선택) |
-| 판단 불확실 | `confidence < min_confidence` **또는** `1등 − 2등 < min_margin` (`ai_service/project.json`의 `decision`, S02로 선택) |
+| Window 전략 | `sliding`: 5초 Window 확률 평균 — `auto`·`whole_track`·`sliding`·`hybrid` 4가지 중 S02 Held-out으로 선택 (`ai_service/project.json`) |
+| 판단 불확실 | `confidence < 0.28` **또는** `1등 − 2등 < 0.03` (`project.json`의 `decision`, S02 + 미학습 동작으로 선택) |
 | FastAPI 입출력 | `POST /api/v1/predict/` = `POST /predict/video` (영상 파일) → 사람별 `track_id` · `action_id` · `confidence` · `margin`(2등과 차이) · 확률 · 입력 품질 + 적용한 판단 기준 · 처리 시간 |
 
 > 응답 형식과 오류 코드 → [`docs/api.md`](docs/api.md)
@@ -151,11 +151,25 @@ Django는 작업을 DB에 저장하고 **커밋이 끝난 뒤** Celery에 등록
 | 판단 기준 점수 | 확정한 정답 − 2 × 확정한 오답 → 틀린 답을 확정하느니 보류 |
 | 미학습 동작 | SBU 악수 영상의 예측은 모두 '불확실'이어야 통과 |
 
-결과 표와 영상별 판정: [`reports/evidence/holdout/holdout_eval.md`](reports/evidence/holdout/holdout_eval.md) · 원본 예측: [`predictions.csv`](reports/evidence/holdout/predictions.csv)
+**결과** (2026-11-24 · 영상 13개 · CPU 54초)
+
+| 설정 | 데이터 | Top-1 | 확정 | 확정 중 정답 | 판단 보류 |
+|---|---|---|---|---|---|
+| 기존 (`auto`, conf ≥ 0.55) | S02 | 3/6 | 0 | — | 6 |
+| 기존 | S03 | 6/6 | 0 | — | 6 |
+| **선택** (`sliding`, conf ≥ 0.28, margin ≥ 0.03) | S02 | 4/6 | 2 | 2/2 | 4 |
+| **선택** | **S03 (테스트)** | 5/6 | 2 | **2/2** | 4 |
+| **선택** | 미학습 동작 (SBU 악수, 2명) | — | **0** | — | 2 |
+
+- **기존 기준(0.55)은 아무것도 확정하지 못했습니다.** S03에서 1등이 6개 모두 정답이었는데도 확률이 0.19~0.37이라 전부 '불확실'로 표시됐습니다.
+- **바꾼 기준은 S03에서 2건을 확정했고 2건 모두 정답**입니다. 오답(walk_turn_walk → drink_return)은 2등과 차이가 0.003이라 보류됐고, 학습하지 않은 동작은 한 명도 확정하지 않았습니다.
+- **정직하게 기록할 점:** S02로 고른 `sliding`은 S03 Top-1이 6/6 → 5/6으로 하나 줄었습니다. 테스트 데이터(S03)로 다시 고르면 테스트가 아니게 되므로 바꾸지 않았고, 줄어든 1건은 보류로 처리되어 틀린 답이 확정되지는 않았습니다. 사람 1명당 6개 영상으로 고른 **잠정값**입니다.
+
+영상별 판정: [`holdout_eval.md`](reports/evidence/holdout/holdout_eval.md) · 원본 예측(영상 × 전략 × 사람): [`predictions.csv`](reports/evidence/holdout/predictions.csv)
 
 ```bash
 cd ai_service
-python -m scripts.evaluate_holdout --videos <subject10_pose_action>/data/day05/videos --negatives <SBU 영상 폴더>
+python -m scripts.evaluate_holdout --videos ~/ai_vision/subject10_pose_action/data/day05/videos --negatives ~/ai_vision/negatives
 ```
 
 ### 기능 테스트
@@ -163,7 +177,7 @@ python -m scripts.evaluate_holdout --videos <subject10_pose_action>/data/day05/v
 | 테스트 | 결과 | 증거 |
 |---|---|---|
 | T01 모델 불러오기 | ✅ 6 Class · 1,140 Feature · 교차 검증 · **SHA256 확인 후 로드** | [`T01_model_load.txt`](reports/evidence/T01_model_load.txt) |
-| T02 영상 업로드 | ✅ 작업 등록 → 결과 저장. 정확도는 학습 원본(6/6, 이관 회귀 확인용)이 아니라 **Held-out**으로 판단 | [`ab_window_strategy.md`](reports/evidence/ab_window_strategy.md) · [`holdout_eval.md`](reports/evidence/holdout/holdout_eval.md) |
+| T02 영상 업로드 | ✅ 작업 등록 → 결과 저장. 새 사람(S03) Top-1 5/6 · 확정 2건 모두 정답 (학습 원본 6/6은 이관 회귀 확인용) | [`ab_window_strategy.md`](reports/evidence/ab_window_strategy.md) · [`holdout_eval.md`](reports/evidence/holdout/holdout_eval.md) |
 | T03 IP Webcam | ✅ 8초 수집 → wave 1순위 (3회 일관) | [`ab_capture_condition.md`](reports/evidence/ab_capture_condition.md) |
 | T04 사람별 결과 | ✅ 2인 영상 → Track별 예측 분리 | [`01_sbu_shaking_hands.json`](reports/evidence/T02_T04/01_sbu_shaking_hands.json) |
 | T05 · T06 비동기 · 영구 저장 | ✅ 즉시 202 + 작업 ID, 새로고침 후 유지 | 자동 테스트 |
@@ -195,8 +209,8 @@ python -m scripts.evaluate_holdout --videos <subject10_pose_action>/data/day05/v
 
 | 항목 | 교재 · 6~8일차 | 이 서비스 | 근거 |
 |---|---|---|---|
-| 추론 입력 구간 | 7일차 5초 sliding Window 평균 | 사람이 보인 구간 ≤ 12초면 **전체 구간 1개** (6일차 학습과 같은 입력) | Window가 동작 일부만 담아 walk_turn_walk 오분류 → [`ab_window_strategy.md`](reports/evidence/ab_window_strategy.md) |
-| 판단 불확실 | Confidence < 0.55 | Confidence **와 1·2등 차이** 두 기준, S02로 선택 | 새 사람의 정답도 0.26~0.33이라 0.55면 전부 불확실. 미학습 동작은 2등과 붙어 있음(차이 0.04~0.07) |
+| 추론 입력 구간 | 7일차 5초 sliding Window 평균 | 4가지 전략을 **같은 Pose 결과로 비교**해 S02로 선택 → `sliding` | 처음엔 학습 영상(day04)에서 walk_turn_walk 오분류 때문에 전체 구간으로 바꿨으나([`ab_window_strategy.md`](reports/evidence/ab_window_strategy.md)), 학습하지 않은 사람(S02)에서는 sliding 4/6 > 전체 구간 3/6 → Held-out 결과를 따름 |
+| 판단 불확실 | Confidence < 0.55 | Confidence ≥ 0.28 **그리고** 1·2등 차이 ≥ 0.03일 때만 확정 | 0.55면 새 사람의 정답까지 전부 불확실(S03 확정 0건). 바꾼 뒤 S03 확정 2건 모두 정답, 미학습 동작 확정 0건 |
 | 모델 로드 | `joblib.load()` 바로 호출 | **SHA256 확인 후** 로드 | pickle은 임의 코드 실행 가능 — 우리가 검증한 그 파일인지 먼저 확인 |
 | 카메라 주소 | 자유 입력 | `ALLOWED_CAMERA_HOSTS`에 있는 host:port만 · 계정 정보 금지 | 서버가 임의 URL을 호출하는 SSRF 방지 |
 | 처리 시간 | 벽시계 차 | Worker 구간은 **단조 시계** | WSL2·Docker 시계 조정으로 전체 시간이 추론보다 짧게 나온 문제 → [`troubleshooting.md`](docs/troubleshooting.md) |
