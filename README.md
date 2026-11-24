@@ -1,9 +1,51 @@
-# VisionAI Motion Analysis
+<div align="center">
 
-> 6일차에 학습한 **6개 동작 인식 Random Forest**를 재학습 없이 재사용한 Vision AI 웹 서비스
-> Django · DRF · Celery · Redis · PostgreSQL · FastAPI · Docker Compose
+# 6개 동작 인식 · 학습된 모델 재사용부터 비동기 웹 서비스까지
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB) ![Django](https://img.shields.io/badge/Django-6.1-092E20) ![FastAPI](https://img.shields.io/badge/FastAPI-009688) ![Celery](https://img.shields.io/badge/Celery-5.7-37814A) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1) ![Docker](https://img.shields.io/badge/Docker_Compose-5_services-2496ED) ![Tests](https://img.shields.io/badge/tests-80_passed-brightgreen)
+</div>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12"> <img src="https://img.shields.io/badge/PyTorch-2.15-EE4C2C?logo=pytorch&logoColor=white" alt="PyTorch 2.15"> <img src="https://img.shields.io/badge/Ultralytics-YOLO11n--pose%208.4.203-111F68?logo=ultralytics&logoColor=white" alt="Ultralytics YOLO11n-pose 8.4.203"> <img src="https://img.shields.io/badge/Tracker-ByteTrack-5C6BC0" alt="Tracker ByteTrack"> <img src="https://img.shields.io/badge/scikit--learn-1.9.1%20RandomForest-F7931E?logo=scikitlearn&logoColor=white" alt="scikit-learn 1.9.1 RandomForest"> <img src="https://img.shields.io/badge/OpenCV-5.0-5C3EE8?logo=opencv&logoColor=white" alt="OpenCV 5.0"> <img src="https://img.shields.io/badge/NumPy-2.5-013243?logo=numpy&logoColor=white" alt="NumPy 2.5"> <img src="https://img.shields.io/badge/pandas-3.1-150458?logo=pandas&logoColor=white" alt="pandas 3.1"><br>
+  <img src="https://img.shields.io/badge/Django-6.1-092E20?logo=django&logoColor=white" alt="Django 6.1"> <img src="https://img.shields.io/badge/DRF-3.18-A30000?logo=django&logoColor=white" alt="DRF 3.18"> <img src="https://img.shields.io/badge/FastAPI-Uvicorn-009688?logo=fastapi&logoColor=white" alt="FastAPI Uvicorn"> <img src="https://img.shields.io/badge/Celery-5.7-37814A?logo=celery&logoColor=white" alt="Celery 5.7"> <img src="https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white" alt="Redis 7"> <img src="https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL 17"> <img src="https://img.shields.io/badge/Chart.js-Dashboard-FF6384?logo=chartdotjs&logoColor=white" alt="Chart.js Dashboard"><br>
+  <img src="https://img.shields.io/badge/Docker%20Compose-5%20services-2496ED?logo=docker&logoColor=white" alt="Docker Compose 5 services"> <img src="https://img.shields.io/badge/pytest-80%20passed-0A9EDC?logo=pytest&logoColor=white" alt="pytest 80 passed"> <img src="https://img.shields.io/badge/Ubuntu-WSL2-E95420?logo=ubuntu&logoColor=white" alt="Ubuntu WSL2">
+</p>
+
+6일차에 학습한 **Random Forest**(30 Step × 38 Feature = 1,140개 입력)를 **재학습 없이** 가져와, 영상 업로드 · 휴대폰 IP Webcam 8초 촬영 → YOLO11n-pose + ByteTrack → **사람별 6개 동작 예측**을 Django · Celery · FastAPI · PostgreSQL 등 Docker Compose 5개 서비스로 배포했습니다.
+학습 데이터가 한 사람(S01)뿐이라 기존 신뢰도 0.55 기준으로는 새 사람(S03)에서 **확정 0건**이었고, 1·2등 확률 차이를 함께 보는 기준을 검증용 사람(S02)으로만 골라 **확정 2건 모두 정답 · 학습 안 한 동작 0 / 6 확정**을 확인했습니다.
+
+## 한눈에 보기
+
+<p align="center">
+  <img src="docs/images/readme_flow.png" alt="입력 영상 → ① AI 추론(FastAPI) → ② 웹 서비스(Django) → 검증(새 사람 S03) → 판단 기준 개선" width="100%">
+</p>
+
+<table>
+  <tr>
+    <th width="10%"></th>
+    <th width="45%">① AI 추론 · 모델 재사용</th>
+    <th width="45%">② 웹 서비스 · 비동기 처리</th>
+  </tr>
+  <tr>
+    <td align="center"><b>한 일</b></td>
+    <td>모델 파일 3종 교차 검증 · 학습 때와 같은 Feature 생성 코드 재사용 · Window 전략 비교 · 판단 불확실 기준 재설계</td>
+    <td>회원 · 권한(DRF) · 커밋 후 Celery 등록 · 실패 시 재시도 · IP Webcam 허용 목록 · Admin · 대시보드</td>
+  </tr>
+  <tr>
+    <td align="center"><b>핵심 숫자</b></td>
+    <td>새 사람 S03 Top-1 <b>5 / 6</b> · 확정 <b>2 / 2</b> 정답 · 학습 안 한 동작 확정 <b>0 / 6</b> · Feature 순서를 뒤집으면 <b>0.500 → 0.167</b></td>
+    <td>접수 <b>0.1초 이내 (202)</b> · Worker 25초 중단에도 작업 유실 <b>없음</b> · T01–T10 <b>10 / 10</b> · 자동 테스트 <b>80</b></td>
+  </tr>
+  <tr>
+    <td align="center"><b>문서</b></td>
+    <td><a href="reports/evidence/holdout/holdout_eval.md">Held-out 검증</a> · <a href="docs/design_qa.md">설계 Q&amp;A</a></td>
+    <td><a href="docs/api.md">API</a> · <a href="docs/verification.md">단계별 검증</a> · <a href="docs/troubleshooting.md">문제 해결</a></td>
+  </tr>
+  <tr>
+    <td align="center"><b>한눈에</b></td>
+    <td align="center" valign="top"><img src="reports/evidence/screenshots/T01_swagger_predict.png" alt="FastAPI 단독 추론"><br>FastAPI 단독 추론 (Swagger)</td>
+    <td align="center" valign="top"><img src="reports/evidence/screenshots/T02_upload_result.png" alt="사람별 분석 결과"><br>사람별 결과 · 신뢰도 · 1·2등 차이</td>
+  </tr>
+</table>
 
 ---
 
