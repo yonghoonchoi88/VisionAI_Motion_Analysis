@@ -21,3 +21,9 @@ backend/db.sqlite3
 .idea/
 .DS_Store
 Thumbs.db
+
+# 검증용 영상 (scripts/make_test_videos.py가 생성) · 업로드 영상
+ai_service/samples/
+*.mp4
+*.avi
+*.webm
