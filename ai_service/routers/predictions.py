@@ -2,7 +2,8 @@
 추론 API (routers/predictions.py)
 
     GET  /health          서버·모델 준비 상태
-    POST /predict/video   Celery Worker가 보낸 영상 1건 → 사람별 예측 JSON
+    POST /predict/video   Celery Worker가 보낸 영상 1건 → 사람별 예측 JSON (과제 문서의 API 계약)
+    GET  /api/v1/health · POST /api/v1/predict/   위와 같은 함수 — 9~10일차 개발 가이드의 권장 경로 규칙
 
 API 계약 (Celery Worker가 결과를 해석하는 기준)
     200 + status="OK"              사람별 예측 1건 이상 → AnalysisJob SUCCESS, PersonPrediction 저장
@@ -211,6 +212,14 @@ def predict_video(request: Request, file: UploadFile = File(..., description="�
         raise _error(500, "INFERENCE_ERROR", f"추론 중 오류가 발생했습니다: {type(e).__name__}") from e
     finally:
         tmp_path.unlink(missing_ok=True)
+
+
+# 개발 가이드 권장 경로(/api/v1/...)도 같은 함수로 연결 — 경로만 다르고 계약은 완전히 같다
+router.add_api_route("/api/v1/health", health, methods=["GET"], response_model=HealthResponse, tags=["v1"])
+router.add_api_route(
+    "/api/v1/predict/", predict_video, methods=["POST"], response_model=PredictVideoResponse,
+    responses=ERROR_RESPONSES, tags=["v1"],
+)
 
 
 def _decision_rule(pipeline) -> DecisionRule:

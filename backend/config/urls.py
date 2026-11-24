@@ -13,7 +13,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("accounts.urls")),
     path("analyses/", include("analyses.urls")),
-    path("api/", include("analyses.api_urls")),
+    path("api/v1/", include("analyses.api_urls")),          # 9~10일차 개발 가이드의 권장 경로 규칙 (/api/v1/...)
     path("dashboard/", dashboard, name="dashboard"),
 ]
 

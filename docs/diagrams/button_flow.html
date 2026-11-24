@@ -41,7 +41,7 @@
   <div class="step" style="left:40px; top:84px; width:300px; height:150px">
     <h3><b>1</b>분석 요청</h3>
     <div class="files"><code>index.html</code><code>analyses.js</code></div>
-    <p>영상 업로드 또는 IP Webcam 선택 → <b>▶ AI 분석 시작</b><br><small>POST /api/analyses/ (FormData)</small></p>
+    <p>영상 업로드 또는 IP Webcam 선택 → <b>▶ AI 분석 시작</b><br><small>POST /api/v1/analyses/ (FormData)</small></p>
   </div>
 
   <div class="step" style="left:420px; top:84px; width:330px; height:150px">
@@ -53,7 +53,7 @@
   <div class="step" style="left:930px; top:84px; width:300px; height:150px">
     <h3><b>7</b>상태 조회</h3>
     <div class="files"><code>analyses.js</code><code>views.py</code></div>
-    <p>GET /api/analyses/{id}/status/ 를 <b>1초마다</b><br><small>대기 → 영상 수집 → AI 분석 → 완료</small></p>
+    <p>GET /api/v1/analyses/{id}/status/ 를 <b>1초마다</b><br><small>대기 → 영상 수집 → AI 분석 → 완료</small></p>
   </div>
 
   <div class="step" style="left:1290px; top:84px; width:310px; height:150px">

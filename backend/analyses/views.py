@@ -1,12 +1,12 @@
 """
 DRF 분석 API (views.py)
 
-    POST   /api/analyses/               분석 요청 → DB 저장 → (커밋 후) Celery 등록 → 202 + 작업 ID
-    GET    /api/analyses/               내 분석 목록 (관리자는 전체)
-    GET    /api/analyses/{id}/          상세 + 사람별 결과
-    PATCH  /api/analyses/{id}/          제목·메모만 수정
-    DELETE /api/analyses/{id}/          삭제 (진행 중이면 409, 사람별 예측·영상 파일도 함께 삭제)
-    GET    /api/analyses/{id}/status/   폴링용 상태
+    POST   /api/v1/analyses/               분석 요청 → DB 저장 → (커밋 후) Celery 등록 → 202 + 작업 ID
+    GET    /api/v1/analyses/               내 분석 목록 (관리자는 전체)
+    GET    /api/v1/analyses/{id}/          상세 + 사람별 결과
+    PATCH  /api/v1/analyses/{id}/          제목·메모만 수정
+    DELETE /api/v1/analyses/{id}/          삭제 (진행 중이면 409, 사람별 예측·영상 파일도 함께 삭제)
+    GET    /api/v1/analyses/{id}/status/   폴링용 상태
 """
 
 from __future__ import annotations

@@ -31,7 +31,7 @@ class AccountTests(TestCase):
 
     def test_anonymous_is_blocked(self):
         self.assertEqual(self.client.get(reverse("analyses:index")).status_code, 302)
-        self.assertEqual(self.client.get("/api/analyses/").status_code, 403)
+        self.assertEqual(self.client.get("/api/v1/analyses/").status_code, 403)
 
 
 class ProfileTests(TestCase):

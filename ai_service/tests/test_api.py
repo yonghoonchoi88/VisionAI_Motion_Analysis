@@ -93,3 +93,12 @@ def test_predict_reports_margin_and_rule(client_factory, make_video):
     assert p["runner_up_label"] in p["probabilities"] and p["runner_up_label"] != p["action_label"]
     assert set(body["decision_rule"]) == {"min_confidence", "min_margin"}
     assert health["decision_rule"] == body["decision_rule"]
+
+
+def test_v1_alias_paths_share_contract(client_factory, make_video):
+    """개발 가이드 권장 경로 /api/v1/health · /api/v1/predict/ 도 같은 계약으로 응답한다."""
+    with client_factory() as c:
+        assert c.get("/api/v1/health").json() == c.get("/health").json()
+        with open(make_video(seconds=2), "rb") as f:
+            r = c.post("/api/v1/predict/", files={"file": ("clip.mp4", f, "video/mp4")})
+    assert r.status_code == 200 and r.json()["status"] == "OK"

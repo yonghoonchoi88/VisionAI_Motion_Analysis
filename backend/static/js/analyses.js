@@ -2,8 +2,8 @@
  * analyses.js — 분석 화면 · 상세 화면 동작
  *
  * 분석 화면 흐름 (버튼 1번 클릭)
- *   1) POST /api/analyses/  (FormData: 영상 또는 카메라 주소)  → 202 + 작업 ID 즉시 반환
- *   2) GET  /api/analyses/{id}/status/ 를 1초마다 조회 → 단계(대기 → 영상 수집 → AI 분석 → 완료) 표시
+ *   1) POST /api/v1/analyses/  (FormData: 영상 또는 카메라 주소)  → 202 + 작업 ID 즉시 반환
+ *   2) GET  /api/v1/analyses/{id}/status/ 를 1초마다 조회 → 단계(대기 → 영상 수집 → AI 분석 → 완료) 표시
  *   3) 완료되면 사람별 결과 표 표시, 최근 이력 맨 위에 추가
  */
 (() => {

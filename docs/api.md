@@ -7,16 +7,16 @@
 
 ---
 
-## 1. DRF API — `/api/analyses/`
+## 1. DRF API — `/api/v1/analyses/`
 
 | 기능 | 메서드 · 경로 | 응답 | 권한 |
 |---|---|---|---|
-| 분석 등록 | `POST /api/analyses/` | **202** + 작업 정보(`id`, `celery_task_id`, `status_url`) | 로그인 |
-| 내 분석 목록 | `GET /api/analyses/` | 200, 페이지당 20개 | 본인 작업만 (관리자는 전체) |
-| 분석 상세 | `GET /api/analyses/{id}/` | 200 + 사람별 예측 | 본인 또는 관리자, 아니면 **404** |
-| 제목·메모 수정 | `PATCH /api/analyses/{id}/` | 200 | 본인 또는 관리자. `title`·`memo` 외 필드는 무시 |
-| 분석 삭제 | `DELETE /api/analyses/{id}/` | 204 · 진행 중이면 **409** | 본인 또는 관리자 |
-| 작업 상태 | `GET /api/analyses/{id}/status/` | 200 (폴링용 가벼운 응답) | 본인 또는 관리자 |
+| 분석 등록 | `POST /api/v1/analyses/` | **202** + 작업 정보(`id`, `celery_task_id`, `status_url`) | 로그인 |
+| 내 분석 목록 | `GET /api/v1/analyses/` | 200, 페이지당 20개 | 본인 작업만 (관리자는 전체) |
+| 분석 상세 | `GET /api/v1/analyses/{id}/` | 200 + 사람별 예측 | 본인 또는 관리자, 아니면 **404** |
+| 제목·메모 수정 | `PATCH /api/v1/analyses/{id}/` | 200 | 본인 또는 관리자. `title`·`memo` 외 필드는 무시 |
+| 분석 삭제 | `DELETE /api/v1/analyses/{id}/` | 204 · 진행 중이면 **409** | 본인 또는 관리자 |
+| 작업 상태 | `GET /api/v1/analyses/{id}/status/` | 200 (폴링용 가벼운 응답) | 본인 또는 관리자 |
 
 전체 교체(`PUT`)는 허용하지 않습니다(405). 다른 회원의 작업은 403이 아니라 404로 응답해 **존재 여부도 숨깁니다**.
 
@@ -33,7 +33,7 @@
 
 검사에 실패하면 **400** + 필드별 메시지(예: `{"camera_url": ["허용되지 않은 카메라입니다: …"]}`). 작업은 만들어지지 않습니다.
 
-### 작업 상태 응답 (`GET /api/analyses/{id}/status/`)
+### 작업 상태 응답 (`GET /api/v1/analyses/{id}/status/`)
 
 ```json
 {

@@ -112,6 +112,11 @@ class AnalysisApiTests(TestCase):
         html = self.client.get(reverse("analyses:detail", args=[job_id])).content.decode()
         self.assertIn("차이", html)
 
+    def test_api_uses_v1_prefix(self):
+        """개발 가이드 권장 경로: /api/v1/analyses/ · /api/v1/analyses/{id}/status/"""
+        self.assertEqual(self.list_url, "/api/v1/analyses/")
+        self.assertEqual(reverse("analysisjob-status", args=[7]), "/api/v1/analyses/7/status/")
+
     def test_no_person_is_success_with_zero_predictions(self):
         job_id = self.create_upload(result=fake_result(0)).json()["id"]
         job = AnalysisJob.objects.get(pk=job_id)

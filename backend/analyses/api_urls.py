@@ -1,4 +1,4 @@
-"""DRF Router: /api/analyses/ (CRUD) + /api/analyses/{id}/status/"""
+"""DRF Router: /api/v1/analyses/ (CRUD) + /api/v1/analyses/{id}/status/"""
 
 from rest_framework.routers import DefaultRouter
 
