@@ -168,6 +168,7 @@
         const i = order.indexOf(li.dataset.step);
         li.className = i < idx || (s?.is_finished && i === idx) ? "is-done" : i === idx ? "is-current" : "";
         if (s?.status === "FAILURE" && i === idx) li.className = "is-failed";
+        if (li.dataset.step === "DONE") li.textContent = s?.status === "FAILURE" ? "실패" : "완료";   // 실패인데 '완료'로 보이지 않게
       });
       $("#status-line").textContent = message || "분석을 시작하면 진행 상황이 여기에 표시됩니다.";
     }

@@ -1,6 +1,6 @@
 /*
  * dashboard.js — Django가 ORM으로 집계해 json_script로 넘긴 데이터로 Chart.js 차트를 그린다.
- *   필수 ① 동작별 예측 건수 (막대, 확신/불확실 누적)   ② 작업 상태별 건수 (도넛)
+ *   필수 ① 동작별 예측 건수 (막대, 확정/판단 불확실 누적)   ② 작업 상태별 건수 (도넛)
  *   선택 ③ 입력 방식별 비율 (도넛)                    ④ 입력 방식별 평균 AI 추론 시간 (막대)
  */
 (() => {
@@ -25,7 +25,7 @@
     data: {
       labels: data.actions.labels,
       datasets: [
-        { label: "확신", data: data.actions.confident, backgroundColor: color("--primary"), borderRadius: 4 },
+        { label: "확정", data: data.actions.confident, backgroundColor: color("--primary"), borderRadius: 4 },
         { label: "판단 불확실", data: data.actions.uncertain, backgroundColor: color("--primary-soft"), borderRadius: 4 },
       ],
     },

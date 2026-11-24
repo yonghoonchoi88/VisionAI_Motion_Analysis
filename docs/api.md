@@ -94,8 +94,8 @@
   "skipped_tracks": [],
   "video": {"filename": "walk_turn_walk.mp4", "fps": 25.0, "fps_assumed": false, "frame_count": 265,
             "processed_frames": 265, "duration_sec": 10.6, "width": "…", "height": "…"},
-  "uncertain_threshold": 0.55,
-  "decision_rule": {"min_confidence": 0.55, "min_margin": 0.0},
+  "uncertain_threshold": 0.2,
+  "decision_rule": {"min_confidence": 0.2, "min_margin": 0.11},
   "processing_time_sec": 7.2
 }
 ```

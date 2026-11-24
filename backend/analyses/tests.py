@@ -126,6 +126,23 @@ class AnalysisApiTests(TestCase):
         self.assertIn('href="/dashboard/"', html)
         self.assertIn("Vision AI 관리자", html)
 
+    def test_index_shows_current_decision_rule(self):
+        """화면 안내 문구는 AI 서버가 실제로 쓰는 기준을 보여 준다 (예전 '55%' 고정 문구 방지)."""
+        from django.core.cache import cache
+
+        cache.clear()
+        with mock.patch("analyses.services.check_health", return_value={"decision_rule": {"min_confidence": 0.2, "min_margin": 0.11}}):
+            html = self.client.get(reverse("analyses:index")).content.decode()
+        self.assertIn("20% 미만이거나 2등과 차이가 11%p 미만", html)
+        self.assertNotIn("55%", html)
+        cache.clear()
+
+    def test_dashboard_forbidden_page_is_friendly(self):
+        """일반 회원의 /dashboard/ 접근 → 403 + 안내 화면 (T08·T09 사용자 친화적 오류)."""
+        resp = self.client.get("/dashboard/")
+        self.assertEqual(resp.status_code, 403)
+        self.assertIn("접근 권한이 없습니다", resp.content.decode())
+
     def test_no_person_is_success_with_zero_predictions(self):
         job_id = self.create_upload(result=fake_result(0)).json()["id"]
         job = AnalysisJob.objects.get(pk=job_id)
@@ -357,8 +374,11 @@ class CameraCaptureTests(TestCase):
             return capture_clip("http://192.168.0.10:8080/video", seconds, self.tmp / "clip.webm")
 
     def test_capture_limits_fps_and_size(self):
-        """60fps·1280x720 스트림 → 약 30fps·640px로 저장, 브라우저 재생용 WebM."""
-        res = self.capture(FakeStream(fps=60))
+        """60fps·1280x720 스트림 → 약 30fps·640px로 저장, 브라우저 재생용 WebM.
+
+        수집 시간을 2초로 둔다: 1초면 CPU가 바쁠 때 Frame 생성·인코딩이 밀려 MIN_FRAMES(15)에 못 미쳐 가끔 실패했다.
+        """
+        res = self.capture(FakeStream(fps=60), seconds=2.0)
         self.assertTrue(res.path.is_file())
         self.assertEqual(res.path.suffix, ".webm")
         self.assertLessEqual(res.fps, 31)

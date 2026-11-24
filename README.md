@@ -3,7 +3,7 @@
 > 6일차에 학습한 **6개 동작 인식 Random Forest**를 재학습 없이 재사용한 Vision AI 웹 서비스
 > Django · DRF · Celery · Redis · PostgreSQL · FastAPI · Docker Compose
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB) ![Django](https://img.shields.io/badge/Django-6.1-092E20) ![FastAPI](https://img.shields.io/badge/FastAPI-009688) ![Celery](https://img.shields.io/badge/Celery-5.7-37814A) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1) ![Docker](https://img.shields.io/badge/Docker_Compose-5_services-2496ED) ![Tests](https://img.shields.io/badge/tests-78_passed-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB) ![Django](https://img.shields.io/badge/Django-6.1-092E20) ![FastAPI](https://img.shields.io/badge/FastAPI-009688) ![Celery](https://img.shields.io/badge/Celery-5.7-37814A) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1) ![Docker](https://img.shields.io/badge/Docker_Compose-5_services-2496ED) ![Tests](https://img.shields.io/badge/tests-80_passed-brightgreen)
 
 ---
 
@@ -121,6 +121,7 @@ Django는 작업을 DB에 저장하고 **커밋이 끝난 뒤** Celery에 등록
 ## 7. 실행 결과와 검증
 
 > 모든 화면은 판단 기준(conf ≥ 0.20 · 1·2등 차이 ≥ 0.11)을 적용한 뒤 Docker Compose 5개 서비스에서 찍었습니다. 이미지를 누르면 원본 크기로 열립니다.
+> 판단 불확실 여부는 **예측을 저장한 시점의 기준**으로 기록됩니다. 대시보드·Admin의 11/23 작업은 예전 기준(0.55)으로 판정된 기록이라 '판단 불확실' 비율이 높게 보입니다.
 
 | 정상 분석 | 오류 · 실패 |
 |---|---|
@@ -190,7 +191,7 @@ python -m scripts.evaluate_holdout --videos ~/ai_vision/subject10_pose_action/da
 | T09 예외 처리 | ✅ 손상 파일 · 카메라 끊김 → FAILURE + 사용자용 사유 | <a href="reports/evidence/screenshots/T09_broken_file.png"><img src="reports/evidence/screenshots/T09_broken_file.png" width="260" alt="T09_broken_file.png"></a><br><a href="reports/evidence/screenshots/T09_camera_lost.png"><img src="reports/evidence/screenshots/T09_camera_lost.png" width="260" alt="T09_camera_lost.png"></a> |
 | T10 Docker | ✅ `docker compose restart` 후 5개 서비스 Up · 작업 · 예측 유지 | <a href="reports/evidence/screenshots/T10_restart.png"><img src="reports/evidence/screenshots/T10_restart.png" width="260" alt="T10_restart.png"></a><br>[`T10_after_restart.txt`](reports/evidence/T10_after_restart.txt) |
 
-자동 테스트 78개 (FastAPI 45 · Django 33) — [`docs/development.md`](docs/development.md) · 단계별 수동 검증(브라우저 · Swagger · curl · Admin · Celery 로그 · PostgreSQL) — [`docs/verification.md`](docs/verification.md)
+자동 테스트 80개 (FastAPI 45 · Django 35) — [`docs/development.md`](docs/development.md) · 단계별 수동 검증(브라우저 · Swagger · curl · Admin · Celery 로그 · PostgreSQL) — [`docs/verification.md`](docs/verification.md)
 
 ### 최종 완료 체크리스트 (개발 가이드 7장)
 

@@ -94,7 +94,15 @@
         <thead><tr><th>Track ID</th><th>예측 동작</th><th>신뢰도</th><th>입력 품질</th></tr></thead>
         <tbody><tr class="empty"><td colspan="4">아직 결과가 없습니다.</td></tr></tbody>
       </table>
-      <p class="hint">신뢰도 55% 미만은 <span class="pill pill--warn">판단 불확실</span>로 표시합니다. 학습하지 않은 동작도 6개 중 하나로 예측될 수 있습니다.</p>
+      <p class="hint" id="decision-hint">
+        {% if decision_rule %}
+          1등 확률이 {% widthratio decision_rule.min_confidence 1 100 %}% 미만이거나 2등과 차이가 {% widthratio decision_rule.min_margin 1 100 %}%p 미만이면
+          <span class="pill pill--warn">판단 불확실</span>로 표시합니다 <small class="muted">(AI 서버의 현재 기준)</small>.
+        {% else %}
+          1등 확률이 낮거나 2등과 확률 차이가 작으면 <span class="pill pill--warn">판단 불확실</span>로 표시합니다.
+        {% endif %}
+        학습하지 않은 동작도 6개 중 하나로 예측될 수 있습니다.
+      </p>
     </section>
   </div>
 </div>

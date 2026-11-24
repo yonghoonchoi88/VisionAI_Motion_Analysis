@@ -27,3 +27,6 @@ ai_service/samples/
 *.mp4
 *.avi
 *.webm
+
+# Windows에서 복사한 파일의 다운로드 출처 표시 (WSL에 함께 생김)
+*:Zone.Identifier

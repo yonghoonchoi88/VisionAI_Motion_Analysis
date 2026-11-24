@@ -19,7 +19,7 @@ from django.shortcuts import get_object_or_404, render
 
 from .constants import ACTIONS
 from .models import AnalysisJob, PersonPrediction
-from .services import check_health
+from .services import check_health, decision_rule
 
 
 def staff_required(view):
@@ -83,6 +83,7 @@ def index(request):
         "capture_max": settings.CAMERA_CAPTURE_SECONDS_MAX,
         "max_upload_mb": settings.MAX_UPLOAD_MB,
         "allowed_ext": ",".join(settings.ALLOWED_VIDEO_EXTENSIONS),
+        "decision_rule": decision_rule(),
     }
     return render(request, "analyses/index.html", context)
 

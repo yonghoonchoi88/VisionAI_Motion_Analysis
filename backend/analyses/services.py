@@ -81,6 +81,21 @@ def predict_video(video_path: Path | str) -> InferenceResult:
     raise InferenceError(f"AI 서버 오류 [{code}] {message}")
 
 
+def decision_rule() -> dict[str, float] | None:
+    """화면 안내 문구용: FastAPI가 지금 적용 중인 판단 불확실 기준 (60초 캐시, 연결 실패 시 None).
+
+    기준값은 ai_service/project.json 한 곳에서만 관리하고, 화면은 그 값을 받아 보여 준다 (값 중복 방지).
+    """
+    from django.core.cache import cache
+
+    rule = cache.get("ai_decision_rule")
+    if rule is None:
+        rule = (check_health() or {}).get("decision_rule")
+        if rule:
+            cache.set("ai_decision_rule", rule, 60)
+    return rule
+
+
 def check_health() -> dict[str, Any] | None:
     """대시보드에 AI 서버 상태를 표시하기 위한 가벼운 확인 (실패하면 None)."""
     try:
