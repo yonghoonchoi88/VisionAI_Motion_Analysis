@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" font-family="'Noto Sans CJK KR','Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs>
+<rect width="1600" height="900" fill="#FFFFFF"/>
+<text x="64" y="80" font-size="46" fill="#0F172A" font-weight="800" text-anchor="start">VisionAI Motion Analysis</text>
+<text x="64" y="120" font-size="22" fill="#64748B" font-weight="400" text-anchor="start">Day-6 action model served on the web without retraining · 6 actions per person in a video</text>
+<text x="1536" y="80" font-size="20" fill="#64748B" font-weight="500" text-anchor="end">Course 10 · individual project</text>
+<text x="1536" y="112" font-size="18" fill="#64748B" font-weight="400" text-anchor="end">Django/DRF · Celery · Redis · FastAPI · PostgreSQL</text>
+<rect x="64" y="156" width="350" height="168" rx="14" fill="#FFFFFF" stroke="#E2E8F0"/>
+<rect x="64" y="156" width="6" height="168" rx="3" fill="#1D4ED8"/>
+<text x="94" y="198" font-size="20" fill="#64748B" font-weight="500" text-anchor="start">Functional tests T01–T10</text>
+<text x="94" y="264" font-size="50" fill="#1D4ED8" font-weight="800" text-anchor="start">10 / 10</text>
+<text x="94" y="302" font-size="18" fill="#64748B" font-weight="400" text-anchor="start">Each backed by screenshots · logs</text>
+<rect x="438" y="156" width="350" height="168" rx="14" fill="#FFFFFF" stroke="#E2E8F0"/>
+<rect x="438" y="156" width="6" height="168" rx="3" fill="#1D4ED8"/>
+<text x="468" y="198" font-size="20" fill="#64748B" font-weight="500" text-anchor="start">Automated tests</text>
+<text x="468" y="264" font-size="50" fill="#1D4ED8" font-weight="800" text-anchor="start">80</text>
+<text x="468" y="302" font-size="18" fill="#64748B" font-weight="400" text-anchor="start">FastAPI 45 · Django 35</text>
+<rect x="812" y="156" width="350" height="168" rx="14" fill="#FFFFFF" stroke="#E2E8F0"/>
+<rect x="812" y="156" width="6" height="168" rx="3" fill="#1D4ED8"/>
+<text x="842" y="198" font-size="20" fill="#64748B" font-weight="500" text-anchor="start">Job submit response</text>
+<text x="842" y="264" font-size="50" fill="#1D4ED8" font-weight="800" text-anchor="start">≤ 0.1 s</text>
+<text x="842" y="302" font-size="18" fill="#64748B" font-weight="400" text-anchor="start">202 at once → async processing</text>
+<rect x="1186" y="156" width="350" height="168" rx="14" fill="#FFFFFF" stroke="#E2E8F0"/>
+<rect x="1186" y="156" width="6" height="168" rx="3" fill="#1D4ED8"/>
+<text x="1216" y="198" font-size="20" fill="#64748B" font-weight="500" text-anchor="start">Unseen person S03 · confirmed</text>
+<text x="1216" y="264" font-size="50" fill="#1D4ED8" font-weight="800" text-anchor="start">2 / 2</text>
+<text x="1216" y="302" font-size="18" fill="#64748B" font-weight="400" text-anchor="start">Both confirmed calls correct</text>
+<rect x="64" y="352" width="900" height="392" rx="14" fill="#F8FAFC" stroke="#E2E8F0"/>
+<text x="96" y="396" font-size="24" fill="#0F172A" font-weight="700" text-anchor="start">One button, end to end</text>
+<text x="432.23999999999995" y="396" font-size="18" fill="#64748B" font-weight="400" text-anchor="start">5 Docker Compose services</text>
+<rect x="96" y="424" width="180" height="100" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+<text x="186.0" y="458" font-size="20" fill="#0F172A" font-weight="700" text-anchor="middle">Input</text>
+<text x="186.0" y="484" font-size="16" fill="#64748B" font-weight="400" text-anchor="middle">Video upload</text>
+<text x="186.0" y="506" font-size="16" fill="#64748B" font-weight="400" text-anchor="middle">IP Webcam 8 s</text>
+<rect x="316" y="424" width="190" height="100" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+<text x="411.0" y="458" font-size="20" fill="#0F172A" font-weight="700" text-anchor="middle">Django + DRF</text>
+<text x="411.0" y="484" font-size="16" fill="#64748B" font-weight="400" text-anchor="middle">Save job</text>
+<text x="411.0" y="506" font-size="16" fill="#64748B" font-weight="400" text-anchor="middle">Enqueue on commit</text>
+<rect x="546" y="424" width="140" height="100" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+<text x="616.0" y="458" font-size="20" fill="#0F172A" font-weight="700" text-anchor="middle">Redis</text>
+<text x="616.0" y="484" font-size="16" fill="#64748B" font-weight="400" text-anchor="middle">Job queue</text>
+<rect x="726" y="424" width="206" height="100" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+<text x="829.0" y="458" font-size="20" fill="#0F172A" font-weight="700" text-anchor="middle">Celery Worker</text>
+<text x="829.0" y="484" font-size="16" fill="#64748B" font-weight="400" text-anchor="middle">Retry on failure</text>
+<text x="829.0" y="506" font-size="16" fill="#64748B" font-weight="400" text-anchor="middle">3 × 10 s</text>
+<path d="M278,474.0 L310,474.0" fill="none" stroke="#64748B" stroke-width="2.5" marker-end="url(#ah)"/>
+<path d="M508,474.0 L540,474.0" fill="none" stroke="#64748B" stroke-width="2.5" marker-end="url(#ah)"/>
+<path d="M688,474.0 L720,474.0" fill="none" stroke="#64748B" stroke-width="2.5" marker-end="url(#ah)"/>
+<rect x="316" y="588" width="210" height="100" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+<text x="421.0" y="622" font-size="20" fill="#0F172A" font-weight="700" text-anchor="middle">PostgreSQL</text>
+<text x="421.0" y="648" font-size="16" fill="#64748B" font-weight="400" text-anchor="middle">1 job : N per-person rows</text>
+<rect x="726" y="588" width="206" height="100" rx="12" fill="#EFF6FF" stroke="#1D4ED8"/>
+<text x="829.0" y="622" font-size="20" fill="#1D4ED8" font-weight="700" text-anchor="middle">FastAPI inference</text>
+<text x="829.0" y="648" font-size="16" fill="#64748B" font-weight="400" text-anchor="middle">YOLO11n-pose → RF</text>
+<text x="829.0" y="670" font-size="16" fill="#64748B" font-weight="400" text-anchor="middle">No DB access</text>
+<path d="M880,524 L880,582" fill="none" stroke="#64748B" stroke-width="2.5" marker-end="url(#ah)"/>
+<path d="M770,524 L770,556 L440,556 L440,582" fill="none" stroke="#64748B" stroke-width="2.5" marker-end="url(#ah)"/>
+<path d="M360,524 L360,582" fill="none" stroke="#64748B" stroke-width="2.5" marker-end="url(#ah)"/>
+<text x="600" y="548" font-size="15" fill="#64748B" font-weight="400" text-anchor="middle">save results</text>
+<text x="96" y="724" font-size="18" fill="#64748B" font-weight="400" text-anchor="start">Browser polls every 1 s · Worker stopped for 25 s and restarted — no job lost</text>
+<rect x="988" y="352" width="548" height="392" rx="14" fill="#F8FAFC" stroke="#E2E8F0"/>
+<text x="1020" y="396" font-size="24" fill="#0F172A" font-weight="700" text-anchor="start">Key problem: the 'uncertain' rule</text>
+<rect x="1020" y="420" width="484" height="124" rx="12" fill="#F1F5F9" stroke="#CBD5E1"/>
+<text x="1044" y="454" font-size="19" fill="#64748B" font-weight="500" text-anchor="start">Before · confidence ≥ 0.55 (Day-7 rule)</text>
+<text x="1044" y="500" font-size="36" fill="#64748B" font-weight="800" text-anchor="start">S03: 0 confirmed</text>
+<text x="1044" y="530" font-size="17" fill="#64748B" font-weight="400" text-anchor="start">Top-1 right on all 6, yet all held back</text>
+<path d="M1262.0,548 L1262.0,574" fill="none" stroke="#1D4ED8" stroke-width="2.5" marker-end="url(#ah)"/>
+<rect x="1020" y="580" width="484" height="146" rx="12" fill="#EFF6FF" stroke="#1D4ED8"/>
+<text x="1044" y="614" font-size="19" fill="#1D4ED8" font-weight="600" text-anchor="start">After · confidence ≥ 0.20 + top-1/2 gap ≥ 0.11</text>
+<text x="1044" y="662" font-size="36" fill="#1D4ED8" font-weight="800" text-anchor="start">2 confirmed · both right</text>
+<text x="1044" y="688" font-size="17" fill="#0F172A" font-weight="400" text-anchor="start">Unseen actions: 0 / 6 confirmed</text>
+<text x="1044" y="712" font-size="15" fill="#64748B" font-weight="400" text-anchor="start">Thresholds picked on S02 only; S03 only reported</text>
+<text x="64" y="800" font-size="20" fill="#0F172A" font-weight="700" text-anchor="start">What makes it trustworthy</text>
+<rect x="64" y="820" width="192.6" height="44" rx="22" fill="#FFFFFF" stroke="#CBD5E1"/>
+<text x="160.3" y="849" font-size="15.0" fill="#0F172A" font-weight="500" text-anchor="middle">SHA256 model check</text>
+<rect x="268.6" y="820" width="392.7" height="44" rx="22" fill="#FFFFFF" stroke="#CBD5E1"/>
+<text x="464.95000000000005" y="849" font-size="15.0" fill="#0F172A" font-weight="500" text-anchor="middle">Fixed feature order (reversed: 0.50→0.17)</text>
+<rect x="673.3" y="820" width="210.0" height="44" rx="22" fill="#FFFFFF" stroke="#CBD5E1"/>
+<text x="778.3" y="849" font-size="15.0" fill="#0F172A" font-weight="500" text-anchor="middle">Enqueue after commit</text>
+<rect x="895.3" y="820" width="183.89999999999998" height="44" rx="22" fill="#FFFFFF" stroke="#CBD5E1"/>
+<text x="987.25" y="849" font-size="15.0" fill="#0F172A" font-weight="500" text-anchor="middle">acks_late + retry</text>
+<rect x="1091.1999999999998" y="820" width="192.6" height="44" rx="22" fill="#FFFFFF" stroke="#CBD5E1"/>
+<text x="1187.4999999999998" y="849" font-size="15.0" fill="#0F172A" font-weight="500" text-anchor="middle">Others' jobs → 404</text>
+<rect x="1295.7999999999997" y="820" width="218.7" height="44" rx="22" fill="#FFFFFF" stroke="#CBD5E1"/>
+<text x="1405.1499999999996" y="849" font-size="15.0" fill="#0F172A" font-weight="500" text-anchor="middle">Camera host allowlist</text>
+</svg>

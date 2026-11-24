@@ -10,13 +10,15 @@
   <img src="https://img.shields.io/badge/Docker%20Compose-5%20services-2496ED?logo=docker&logoColor=white" alt="Docker Compose 5 services"> <img src="https://img.shields.io/badge/pytest-80%20passed-0A9EDC?logo=pytest&logoColor=white" alt="pytest 80 passed"> <img src="https://img.shields.io/badge/Ubuntu-WSL2-E95420?logo=ubuntu&logoColor=white" alt="Ubuntu WSL2">
 </p>
 
+<p align="center"><b>한국어</b> | <a href="README.en.md">English</a></p>
+
 6일차에 학습한 **Random Forest**(30 Step × 38 Feature = 1,140개 입력)를 **재학습 없이** 가져와, 영상 업로드 · 휴대폰 IP Webcam 8초 촬영 → YOLO11n-pose + ByteTrack → **사람별 6개 동작 예측**을 Django · Celery · FastAPI · PostgreSQL 등 Docker Compose 5개 서비스로 배포했습니다.
 학습 데이터가 한 사람(S01)뿐이라 기존 신뢰도 0.55 기준으로는 새 사람(S03)에서 **확정 0건**이었고, 1·2등 확률 차이를 함께 보는 기준을 검증용 사람(S02)으로만 골라 **확정 2건 모두 정답 · 학습 안 한 동작 0 / 6 확정**을 확인했습니다.
 
 ## 한눈에 보기
 
 <p align="center">
-  <img src="docs/images/readme_flow.png" alt="입력 영상 → ① AI 추론(FastAPI) → ② 웹 서비스(Django) → 검증(새 사람 S03) → 판단 기준 개선" width="100%">
+  <img src="docs/images/overview.png" alt="한눈에 보기: 기능 테스트 10/10 · 자동 테스트 80 · 202 응답 0.1초 이내 · S03 확정 2/2 정답 · 버튼 한 번의 흐름 · 판단 불확실 기준 개선" width="100%">
 </p>
 
 <table>
